@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Especificación de Producto | La Colmena</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght=400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="logo"><i class="fa-solid fa-honeycomb brand-icon"></i>La <span>Colmena</span></a>
+            <div class="nav-user-actions">
+                <button id="theme-toggle-btn" class="theme-btn"><i class="fa fa-moon"></i></button>
+                <a href="catalogo.html" class="nav-icon-link"><i class="fa fa-th-large"></i><span>Catálogo</span></a>
+                <button onclick="toggleCartSidebar(true)" class="nav-icon-link"><i class="fa fa-shopping-basket"></i> Carrito (<span id="cart-global-count">0</span>)</button>
+                <div id="nav-profile-widget"></div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Sidebar Deslizable del Carrito -->
+    <div class="cart-sidebar-overlay" id="cart-overlay"></div>
+    <aside class="cart-sidebar" id="cart-sidebar">
+        <div class="cart-sidebar-header">
+            <h3><i class="fa-solid fa-basket-shopping"></i> Tu Carrito</h3>
+            <button class="cart-close-btn">&times;</button>
+        </div>
+        <div class="cart-sidebar-body" id="cart-items-container"></div>
+        <div class="cart-sidebar-footer" style="padding: 20px; border-top: 1px solid var(--border-subtle);">
+            <div style="display:flex; justify-content:space-between; margin-bottom:15px; font-weight:700;">
+                <span>Monto Estimado:</span>
+                <span id="cart-total-display">$0.00</span>
+            </div>
+            <button onclick="abrirPasarelaPagoModal()" class="btn-primary-colmena w-100" style="padding:14px; justify-content:center; font-size:1rem;">
+                <i class="fa-solid fa-wallet"></i> Proceder al Pago Seguro
+            </button>
+        </div>
+    </aside>
+
+    <main class="container-wrapper" style="padding-top:60px; padding-bottom:80px;" id="detail-page-container"></main>
+
+    <script src="app.js"></script>
+</body>
+</html>

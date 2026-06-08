@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>La Colmena | Autenticación y Perfil</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght=300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="logo"><i class="fa-solid fa-honeycomb brand-icon"></i>La <span>Colmena</span></a>
+            <div class="nav-user-actions">
+                <button id="theme-toggle-btn" class="theme-btn"><i class="fa fa-moon"></i></button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="auth-main-container">
+        <div class="container-wrapper" style="width: 100%; max-width: 550px; margin: 40px auto;">
+            
+            <div id="auth-forms-wrapper" class="auth-box">
+                <div class="auth-tabs" id="auth-tabs-headers">
+                    <button id="tab-login" class="tab-btn active" onclick="switchAuthTab('login')">Iniciar Sesión</button>
+                    <button id="tab-register" class="tab-btn" onclick="switchAuthTab('register')">Registrarse</button>
+                </div>
+
+                <form id="login-form" class="auth-form-element">
+                    <h3>Bienvenido de vuelta</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 0.9rem;">Ingresa a tu cuenta comercial para continuar.</p>
+                    
+                    <div class="input-group-colmena">
+                        <label for="login-email">Correo Electrónico</label>
+                        <input type="email" id="login-email" required placeholder="ejemplo@ucab.edu.ve">
+                    </div>
+                    <div class="input-group-colmena">
+                        <label for="login-password">Contraseña</label>
+                        <input type="password" id="login-password" required placeholder="••••••••">
+                    </div>
+                    
+                    <button type="submit" class="btn-primary-colmena w-100" style="padding: 12px; margin-top: 10px; justify-content: center;">
+                        <i class="fa-solid fa-right-to-bracket"></i> Entrar a la Colmena
+                    </button>
+                    
+                    <div style="text-align: center; margin-top: 15px;">
+                        <a href="#" onclick="switchAuthTab('forgot')" style="color: var(--ucab-green-light); font-size: 0.85rem; font-weight: 600; text-decoration: none;">¿Olvidaste tu contraseña?</a>
+                    </div>
+                </form>
+
+                <form id="register-form" class="auth-form-element hidden">
+                    <h3>Crea tu perfil comercial</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 0.9rem;">Forma parte del marketplace descentralizado de la comunidad.</p>
+                    
+                    <div class="input-group-colmena">
+                        <label for="reg-name">Nombre Comercial / Completo</label>
+                        <input type="text" id="reg-name" required placeholder="Ej. Juan Pérez u Tienda de Miel">
+                    </div>
+                    <div class="input-group-colmena">
+                        <label for="reg-email">Correo Electrónico</label>
+                        <input type="email" id="reg-email" required placeholder="correo@ucab.edu.ve">
+                    </div>
+                    <div class="input-group-colmena">
+                        <label for="reg-password">Contraseña</label>
+                        <input type="password" id="reg-password" required placeholder="Mínimo 6 caracteres">
+                    </div>
+                    <div class="input-group-colmena">
+                        <label for="reg-role">Tipo de Rol Comercial</label>
+                        <select id="reg-role" class="select-colmena" style="width:100%; padding:12px; border-radius:8px;" required>
+                            <option value="Usuario regular">Usuario Regular (Comprador)</option>
+                            <option value="Administrador">Administrador (Gestor de Inventario)</option>
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="btn-primary-colmena w-100" style="padding: 12px; margin-top: 10px; justify-content: center;">
+                        <i class="fa-solid fa-user-plus"></i> Registrarme
+                    </button>
+                </form>
+
+                <form id="forgot-form" class="auth-form-element hidden">
+                    <h3>Recuperar cuenta</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 0.9rem;">Te enviaremos las instrucciones de restablecimiento de forma simulada.</p>
+                    <div class="input-group-colmena">
+                        <label for="forgot-email">Correo Registrado</label>
+                        <input type="email" id="forgot-email" required placeholder="usuario@ucab.edu.ve">
+                    </div>
+                    <button type="submit" class="btn-primary-colmena w-100" style="padding: 12px; margin-top: 10px; justify-content: center;">
+                        Enviar Enlace de Recuperación
+                    </button>
+                    <div style="text-align: center; margin-top: 15px;">
+                        <a href="#" onclick="switchAuthTab('login')" style="color: var(--text-secondary); font-size: 0.85rem; text-decoration: none;"><i class="fa-solid fa-arrow-left"></i> Volver al Login</a>
+                    </div>
+                </form>
+                
+                <div id="auth-global-feedback" class="newsletter-feedback hidden" style="margin-top:20px; padding:12px; border-radius:8px; text-align:center;"></div>
+            </div>
+
+            <div id="profile-panel-wrapper" class="auth-box hidden">
+                <div style="text-align: center; margin-bottom: 25px;">
+                    <div style="position: relative; display: inline-block;">
+                        <img id="profile-avatar-display" src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150" alt="Avatar" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid var(--ucab-green);">
+                        <span id="profile-role-badge" class="stock-badge in-stock" style="position: absolute; bottom: 0; right: 0; padding: 4px 10px; font-size: 0.75rem; border-radius: 20px; box-shadow: var(--shadow-sm);">Rol</span>
+                    </div>
+                    <h2 id="profile-name-display" style="margin-top: 15px; font-size: 1.5rem; font-weight: 800;">Nombre del Usuario</h2>
+                    <p id="profile-email-display" style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 2px;">correo@ejemplo.com</p>
+                </div>
+
+                <form id="profile-edit-form" class="profile-form-body">
+                    <h3 style="font-size: 1.1rem; margin-bottom: 15px;">Editar Datos del Perfil</h3>
+                    
+                    <div class="input-group-colmena">
+                        <label for="edit-name">Nombre Comercial</label>
+                        <input type="text" id="edit-name" required>
+                    </div>
+                    <div class="input-group-colmena">
+                        <label for="edit-avatar">URL de la Imagen de Avatar</label>
+                        <input type="url" id="edit-avatar" required>
+                    </div>
+                    <div class="input-group-colmena">
+                        <label for="edit-address">Dirección de Envío / Entrega Física</label>
+                        <textarea id="edit-address" rows="3" required placeholder="Indica calle, sector u oficina de la universidad..."></textarea>
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 20px;">
+                        <button type="submit" class="btn-primary-colmena" style="justify-content: center; padding: 12px;">
+                            <i class="fa-solid fa-floppy-disk"></i> Guardar Cambios
+                        </button>
+                        <button type="button" class="btn-logout-colmena" onclick="ejecutarCierreSesion()" style="background-color: transparent; border: 1px solid #EF4444; color: #EF4444; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: var(--transition);">
+                            <i class="fa-solid fa-arrow-right-from-bracket"></i> Cerrar Sesión Activa
+                        </button>
+                    </div>
+                </form>
+                <div id="profile-global-feedback" class="newsletter-feedback hidden" style="margin-top:15px; padding:10px; border-radius:6px; text-align:center;"></div>
+            </div>
+
+        </div>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>

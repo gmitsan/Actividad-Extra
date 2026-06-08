@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>La Colmena | Marketplace Global</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght=300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <nav class="main-nav">
+        <div class="nav-container">
+            <div class="nav-left">
+                <a href="index.html" class="logo">
+                    <i class="fa-solid fa-honeycomb brand-icon"></i>La <span>Colmena</span>
+                </a>
+            </div>
+            
+            <div class="search-bar">
+                <i class="fa fa-search"></i>
+                <input type="text" placeholder="¿Qué estás buscando hoy? Ir al catálogo..." readonly onclick="window.location.href='catalogo.html'">
+            </div>
+
+            <div class="nav-user-actions">
+                <button id="theme-toggle-btn" class="theme-btn"><i class="fa fa-moon"></i></button>
+                <a href="catalogo.html" class="nav-icon-link"><i class="fa fa-th-large"></i><span>Catálogo</span></a>
+                
+                <div id="nav-profile-widget" class="nav-profile-widget-container">
+                    <a href="registro.html" class="btn-publish" id="nav-login-btn">
+                        <i class="fa fa-user-circle"></i> <span>Ingresar</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+    </nav>
+    <!-- NUEVO: Botón Flotante para Abrir el Carrito -->
+    <button class="cart-floating-trigger" id="cart-open-btn" onclick="toggleCartSidebar(true)">
+        <i class="fa-solid fa-cart-shopping"></i>
+        <span class="cart-counter-badge" id="cart-global-count">0</span>
+    </button>
+
+    <!-- NUEVO: Sidebar Deslizable del Carrito de Compras -->
+    <div class="cart-sidebar-overlay" id="cart-overlay"></div>
+    <aside class="cart-sidebar" id="cart-sidebar">
+        <div class="cart-sidebar-header">
+            <h3><i class="fa-solid fa-basket-shopping"></i> Tu Carrito</h3>
+            <button class="cart-close-btn">&times;</button>
+        </div>
+        <div class="cart-sidebar-body" id="cart-items-container"></div>
+        <div class="cart-sidebar-footer" style="padding: 20px; border-top: 1px solid var(--border-subtle);">
+            <div style="display:flex; justify-content:space-between; margin-bottom:15px; font-weight:700;">
+                <span>Monto Estimado:</span>
+                <span id="cart-total-display">$0.00</span>
+            </div>
+            <button onclick="abrirPasarelaPagoModal()" class="btn-primary-colmena w-100" style="padding:14px; justify-content:center; font-size:1rem;">
+                <i class="fa-solid fa-wallet"></i> Proceder al Pago Seguro
+            </button>
+        </div>
+    </aside>
+    <main>
+        <header class="hero-section">
+            <div class="hero-container">
+                <div class="hero-content">
+                    <span class="hero-badge"><i class="fa-solid fa-sparkles"></i> El Marketplace de la Comunidad</span>
+                    <h1>Encuentra todo lo que necesitas en un solo <span>lugar</span></h1>
+                    <p>Compra y vende libros, tecnología, materiales, uniformes y herramientas con total comodidad. Conéctate con cientos de usuarios de forma rápida, directa y transparente.</p>
+                    <div class="hero-actions">
+                        <a href="catalogo.html" class="cta-button">Explorar Catálogo <i class="fa-solid fa-arrow-right"></i></a>
+                        <a href="registro.html" class="cta-button-secondary">Crear Cuenta</a>
+                    </div>
+                </div>
+                <div class="hero-visual">
+                    <div class="abstract-shape-1"></div>
+                    <div class="abstract-shape-2"></div>
+                </div>
+            </div>
+        </header>
+
+        <section class="benefits-section">
+            <div class="container-wrapper">
+                <div class="section-header-center">
+                    <span class="section-tag">Ventajas</span>
+                    <h2>Diseñado para mejorar tu experiencia</h2>
+                    <p>Olvídate de los procesos complejos. En La Colmena todo es directo, intuitivo y seguro.</p>
+                </div>
+                
+                <div class="benefits-grid">
+                    <div class="benefit-card">
+                        <div class="benefit-icon-wrapper"><i class="fa-solid fa-bolt"></i></div>
+                        <h3>Intercambio Directo</h3>
+                        <p>Contacta directamente al vendedor, acuerda el punto de encuentro conveniente y finaliza tu compra sin intermediarios.</p>
+                    </div>
+                    <div class="benefit-card">
+                        <div class="benefit-icon-wrapper"><i class="fa-solid fa-shield-halved"></i></div>
+                        <h3>Transacciones Transparentes</h3>
+                        <p>Revisa las calificaciones e historial de reputación de los miembros antes de concretar tus transacciones.</p>
+                    </div>
+                    <div class="benefit-card">
+                        <div class="benefit-icon-wrapper"><i class="fa-solid fa-cloud-sun"></i></div>
+                        <h3>Experiencia Deslumbrante</h3>
+                        <p>Cambia entre el modo claro y oscuro de manera nativa. Una interfaz fluida optimizada para computadoras y móviles.</p>
+                    </div>
+                    <div class="benefit-card">
+                        <div class="benefit-icon-wrapper"><i class="fa-solid fa-wifi"></i></div>
+                        <h3>Soporte Offline Activo</h3>
+                        <p>Sigue visualizando el catálogo de productos y gestionando tu carrito incluso si te quedas momentáneamente sin señal.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="featured-section">
+            <div class="container-wrapper">
+                <div class="section-header-inline">
+                    <div>
+                        <span class="section-tag">Destacados</span>
+                        <h2>Los más deseados de la comunidad</h2>
+                    </div>
+                    <a href="catalogo.html" class="view-all-link">Ver todo el inventario <i class="fa-solid fa-chevron-right"></i></a>
+                </div>
+                
+                <div class="products-grid" id="featured-products-grid">
+                    <div class="loading-state">
+                        <i class="fa-solid fa-spinner fa-spin"></i>
+                        <p>Cargando productos reales desde la API...</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="testimonials-section">
+            <div class="container-wrapper">
+                <div class="section-header-center">
+                    <span class="section-tag">Testimonios</span>
+                    <h2>¿Qué dicen los usuarios?</h2>
+                </div>
+                
+                <div class="testimonials-grid">
+                    <div class="testimonial-card">
+                        <div class="testimonial-stars">
+                            <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+                        </div>
+                        <p>"Pude vender mis libros de semestres anteriores en tiempo récord. El trato fue directo y todo el proceso súper transparente. ¡100% recomendados!"</p>
+                        <div class="testimonial-author">
+                            <div class="author-avatar"><i class="fa-regular fa-user"></i></div>
+                            <div>
+                                <h4>Mariana Gutiérrez</h4>
+                                <p>Usuario Comprador</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="testimonial-card">
+                        <div class="testimonial-stars">
+                            <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+                        </div>
+                        <p>"Conseguir mis herramientas tecnológicas de segunda mano aquí me ahorró muchísimo dinero. La interfaz es moderna y corre genial en mi teléfono."</p>
+                        <div class="testimonial-author">
+                            <div class="author-avatar"><i class="fa-regular fa-user"></i></div>
+                            <div>
+                                <h4>David Apolinar</h4>
+                                <p>Usuario Cliente</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="testimonial-card">
+                        <div class="testimonial-stars">
+                            <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-regular fa-star"></i>
+                        </div>
+                        <p>"El sistema offline me salvó la vida cuando estaba en un sótano sin señal de datos. Pude revisar la lista del carrito y los detalles sin problemas."</p>
+                        <div class="testimonial-author">
+                            <div class="author-avatar"><i class="fa-regular fa-user"></i></div>
+                            <div>
+                                <h4>Diana Ferrera</h4>
+                                <p>Usuario Comerciante</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="newsletter-section">
+            <div class="newsletter-wrapper">
+                <div class="newsletter-grid">
+                    <div class="newsletter-info">
+                        <h2>¡Entérate de las mejores ofertas antes que nadie!</h2>
+                        <p>Únete a nuestro boletín para recibir alertas semanales con productos destacados, promociones exclusivas y lanzamientos en el catálogo.</p>
+                    </div>
+                    <div class="newsletter-action-box">
+                        <form id="newsletter-form" class="newsletter-form-element">
+                            <input type="email" placeholder="Introduce tu correo electrónico" required id="newsletter-email">
+                            <button type="submit" class="btn-submit-newsletter">Suscribirse <i class="fa-solid fa-paper-plane"></i></button>
+                        </form>
+                        <div id="newsletter-message" class="newsletter-feedback hidden"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="main-footer">
+        <div class="footer-container">
+            <div class="footer-top-row">
+                <div class="footer-brand">
+                    <span class="logo-footer">La <span>Colmena</span></span>
+                    <p>Tu punto de encuentro comercial moderno, seguro y descentralizado.</p>
+                </div>
+                <div class="footer-links-group">
+                    <a href="#">Privacidad</a>
+                    <a href="#">Términos</a>
+                    <a href="#">Ayuda</a>
+                </div>
+                <div class="footer-socials">
+                    <a href="#" aria-label="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
+                    <a href="#" aria-label="Twitter"><i class="fa-brands fa-x-twitter"></i></a>
+                    <a href="#" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
+                </div>
+            </div>
+            <div class="footer-bottom-row">
+                <p>&copy; 2026 La Colmena. Todos los derechos reservados.</p>
+                <div class="network-badge-colmena" id="network-status">
+                    <i id="network-icon" class="fa fa-circle"></i> <span id="network-text">Verificando conexión...</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
