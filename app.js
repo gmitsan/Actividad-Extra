@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     initRouting();
     attachGlobalEvents();
     updateGlobalCartCounter();
+    renderNavProfileWidget();
 });
 
 function initRouting() {
@@ -173,10 +174,21 @@ function renderNavProfileWidget() {
         `;
     } else {
         widget.innerHTML = `
-            <a href="registro.html" class="btn-primary-colmena" id="nav-login-btn" style="text-decoration:none;">
+            <a href="registro.html" class="btn-primary-colmena" id="nav-login-btn" style="text-decoration:none; display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; font-size: 0.85rem; border-radius: 8px;">
                 <i class="fa fa-user-circle"></i> <span>Ingresar</span>
             </a>
         `;
+    }
+
+    const heroAuthBtn = document.getElementById('hero-auth-btn');
+    if (heroAuthBtn) {
+        if (AppState.user) {
+            heroAuthBtn.innerHTML = `Ver mi Perfil <i class="fa-solid fa-user" style="margin-left: 6px; font-size: 0.85rem;"></i>`;
+            heroAuthBtn.href = "registro.html";
+        } else {
+            heroAuthBtn.textContent = "Crear Cuenta";
+            heroAuthBtn.href = "registro.html";
+        }
     }
 }
 
@@ -575,8 +587,13 @@ function initAuthModule() {
     }
     
     if (AppState.user) {
+        // Ocultamos los formularios de acceso
         document.getElementById('auth-forms-wrapper')?.classList.add('hidden');
         document.getElementById('profile-panel-wrapper')?.classList.remove('hidden');
+        
+        // --- NUEVO: Ocultar las pestañas superiores de "Iniciar Sesión / Crear Cuenta" si ya está logueado ---
+        const tabsWrapper = document.querySelector('.auth-tabs');
+        if (tabsWrapper) tabsWrapper.style.display = 'none';
         
         const avatarDisp = document.getElementById('profile-avatar-display');
         const nameDisp = document.getElementById('profile-name-display');
@@ -595,6 +612,9 @@ function initAuthModule() {
         if (editName) editName.value = AppState.user.name;
         if (editAvatar) editAvatar.value = AppState.user.avatar || '';
         if (editAddress) editAddress.value = AppState.user.address || '';
+
+        // --- NUEVO: Renderizar el historial de compras del usuario ---
+        renderHistorialComprasUsuario();
     }
     
     document.getElementById('register-form')?.addEventListener('submit', (e) => {
@@ -634,7 +654,6 @@ function initAuthModule() {
         sessionStorage.setItem('activeUser', JSON.stringify(encontrado));
         AppState.user = encontrado;
         
-        // REDIRECCIÓN INTELIGENTE SEGÚN EL ROL (Requisito Solicitado)
         if (encontrado.role === 'Administrador') {
             window.location.href = 'admin.html';
         } else {
@@ -663,6 +682,50 @@ function initAuthModule() {
             window.location.reload();
         }
     });
+}
+
+function renderHistorialComprasUsuario() {
+    const container = document.getElementById('user-orders-history-container');
+    if (!container) return;
+
+    const misCompras = AppState.ventas.filter(v => v.userName === AppState.user.name);
+
+    if (misCompras.length === 0) {
+        container.innerHTML = `
+            <div style="text-align:center; padding:30px; color:var(--text-muted);">
+                <i class="fa-solid fa-bag-shopping" style="font-size:2rem; margin-bottom:10px; display:block;"></i>
+                <p style="font-size:0.9rem;">Aún no has realizado compras en La Colmena.</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = misCompras.map(compra => {
+        let statusClass = 'pending';
+        let statusIcon = '⏳';
+        if (compra.status === 'Enviado') { statusClass = 'shipping'; statusIcon = '🚚'; }
+        if (compra.status === 'Entregado') { statusClass = 'delivered'; statusIcon = '✅'; }
+
+        return `
+            <div class="user-order-card" style="background:var(--bg-main); border:1px solid var(--border-subtle); padding:16px; border-radius:12px; margin-bottom:12px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
+                    <span style="font-weight:700; font-size:0.9rem; color:var(--text-primary);">Orden #${compra.id}</span>
+                    <span style="font-size:0.8rem; color:var(--text-secondary);">${compra.date}</span>
+                </div>
+                <div style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:10px; line-height:1.4;">
+                    <div style="max-height:60px; overflow-y:auto; padding-right:4px;">
+                        ${compra.items.map(i => `• ${i.title} <strong>(x${i.cantidad})</strong>`).join('<br>')}
+                    </div>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px dashed var(--border-subtle); padding-top:10px; margin-top:5px;">
+                    <div><span style="font-size:0.8rem; color:var(--text-muted);">Total:</span> <strong style="color:var(--ucab-green-light); font-size:0.95rem;">$${compra.total.toFixed(2)}</strong></div>
+                    <span class="user-order-status-badge ${statusClass}" style="font-size:0.8rem; font-weight:700; padding:4px 10px; border-radius:6px; background:var(--bg-surface); border:1px solid var(--border-subtle);">
+                        ${statusIcon} ${compra.status}
+                    </span>
+                </div>
+            </div>
+        `;
+    }).join('');
 }
 
 function switchAuthTab(target) {

@@ -97,43 +97,59 @@
                 <div id="auth-global-feedback" class="newsletter-feedback hidden" style="margin-top:20px; padding:12px; border-radius:8px; text-align:center;"></div>
             </div>
 
-            <div id="profile-panel-wrapper" class="auth-box hidden">
-                <div style="text-align: center; margin-bottom: 25px;">
-                    <div style="position: relative; display: inline-block;">
-                        <img id="profile-avatar-display" src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150" alt="Avatar" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid var(--ucab-green);">
-                        <span id="profile-role-badge" class="stock-badge in-stock" style="position: absolute; bottom: 0; right: 0; padding: 4px 10px; font-size: 0.75rem; border-radius: 20px; box-shadow: var(--shadow-sm);">Rol</span>
-                    </div>
-                    <h2 id="profile-name-display" style="margin-top: 15px; font-size: 1.5rem; font-weight: 800;">Nombre del Usuario</h2>
-                    <p id="profile-email-display" style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 2px;">correo@ejemplo.com</p>
-                </div>
+            <div id="profile-panel-wrapper" class="profile-box hidden" style="width: 100%; max-width: 900px; margin: 0 auto;">
+    <div style="text-align: center; margin-bottom: 30px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 20px;">
+        <div style="position: relative; display: inline-block;">
+            <img id="profile-avatar-display" src="" alt="Avatar de Usuario" style="width: 110px; height: 110px; border-radius: 50%; object-fit: cover; border: 4px solid var(--ucab-green); box-shadow: var(--shadow-md);">
+            <span id="profile-role-badge" style="position: absolute; bottom: 0; right: 0; background: var(--ucab-green); color: #fff; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; border: 2px solid var(--bg-surface);"></span>
+        </div>
+        <h2 id="profile-name-display" style="font-size: 1.6rem; font-weight: 800; margin-top: 12px; color: var(--text-primary);"></h2>
+        <p id="profile-email-display" style="font-size: 0.9rem; color: var(--text-secondary);"></p>
+    </div>
 
-                <form id="profile-edit-form" class="profile-form-body">
-                    <h3 style="font-size: 1.1rem; margin-bottom: 15px;">Editar Datos del Perfil</h3>
-                    
-                    <div class="input-group-colmena">
-                        <label for="edit-name">Nombre Comercial</label>
-                        <input type="text" id="edit-name" required>
-                    </div>
-                    <div class="input-group-colmena">
-                        <label for="edit-avatar">URL de la Imagen de Avatar</label>
-                        <input type="url" id="edit-avatar" required>
-                    </div>
-                    <div class="input-group-colmena">
-                        <label for="edit-address">Dirección de Envío / Entrega Física</label>
-                        <textarea id="edit-address" rows="3" required placeholder="Indica calle, sector u oficina de la universidad..."></textarea>
-                    </div>
-                    
-                    <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 20px;">
-                        <button type="submit" class="btn-primary-colmena" style="justify-content: center; padding: 12px;">
-                            <i class="fa-solid fa-floppy-disk"></i> Guardar Cambios
-                        </button>
-                        <button type="button" class="btn-logout-colmena" onclick="ejecutarCierreSesion()" style="background-color: transparent; border: 1px solid #EF4444; color: #EF4444; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: var(--transition);">
-                            <i class="fa-solid fa-arrow-right-from-bracket"></i> Cerrar Sesión Activa
-                        </button>
-                    </div>
-                </form>
-                <div id="profile-global-feedback" class="newsletter-feedback hidden" style="margin-top:15px; padding:10px; border-radius:6px; text-align:center;"></div>
-            </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 30px; align-items: start;">
+        
+        <div style="background: var(--bg-surface); padding: 5px; border-radius: 8px;">
+            <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-user-gear" style="color: var(--ucab-green-light);"></i> Configuración de Cuenta
+            </h3>
+            <form id="profile-edit-form" style="display: flex; flex-direction: column; gap: 16px;">
+                <div class="input-group-colmena">
+                    <label for="edit-name">Nombre Completo</label>
+                    <input type="text" id="edit-name" required placeholder="Tu nombre">
+                </div>
+                <div class="input-group-colmena">
+                    <label for="edit-avatar">URL de Imagen de Perfil (Avatar)</label>
+                    <input type="url" id="edit-avatar" required placeholder="https://ejemplo.com/foto.jpg">
+                </div>
+                <div class="input-group-colmena">
+                    <label for="edit-address">Dirección de Envío / Entrega Física</label>
+                    <textarea id="edit-address" rows="3" required placeholder="Indica calle, sector u oficina de la universidad..."></textarea>
+                </div>
+                
+                <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
+                    <button type="submit" class="btn-primary-colmena" style="justify-content: center; padding: 12px; font-size: 0.95rem;">
+                        <i class="fa-solid fa-floppy-disk"></i> Guardar Cambios
+                    </button>
+                    <button type="button" class="btn-logout-colmena" onclick="ejecutarCierreSesion()" style="background-color: transparent; border: 1px solid #EF4444; color: #EF4444; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; text-align: center; display: flex; justify-content: center; align-items: center; gap: 8px;">
+                        <i class="fa-solid fa-arrow-right-from-bracket"></i> Cerrar Sesión Activa
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div style="background: var(--bg-surface); border-left: 1px solid var(--border-subtle); padding-left: 15px;">
+            <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-clock-rotate-left" style="color: var(--ucab-green-light);"></i> Mis Pedidos en La Colmena
+            </h3>
+            
+            <div id="user-orders-history-container" style="max-height: 420px; overflow-y: auto; padding-right: 5px;">
+                </div>
+        </div>
+
+    </div>
+    <div id="profile-global-feedback" class="newsletter-feedback hidden" style="margin-top:15px; padding:10px; border-radius:6px; text-align:center;"></div>
+</div>
 
         </div>
     </main>

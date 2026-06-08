@@ -27,22 +27,16 @@
                 <button id="theme-toggle-btn" class="theme-btn"><i class="fa fa-moon"></i></button>
                 <a href="catalogo.html" class="nav-icon-link"><i class="fa fa-th-large"></i><span>Catálogo</span></a>
                 
-                <div id="nav-profile-widget" class="nav-profile-widget-container">
-                    <a href="registro.html" class="btn-publish" id="nav-login-btn">
-                        <i class="fa fa-user-circle"></i> <span>Ingresar</span>
-                    </a>
-                </div>
+                <div id="nav-profile-widget" class="nav-profile-widget-container"></div>
             </div>
         </div>
-        
     </nav>
-    <!-- NUEVO: Botón Flotante para Abrir el Carrito -->
+
     <button class="cart-floating-trigger" id="cart-open-btn" onclick="toggleCartSidebar(true)">
         <i class="fa-solid fa-cart-shopping"></i>
         <span class="cart-counter-badge" id="cart-global-count">0</span>
     </button>
 
-    <!-- NUEVO: Sidebar Deslizable del Carrito de Compras -->
     <div class="cart-sidebar-overlay" id="cart-overlay"></div>
     <aside class="cart-sidebar" id="cart-sidebar">
         <div class="cart-sidebar-header">
@@ -60,6 +54,7 @@
             </button>
         </div>
     </aside>
+
     <main>
         <header class="hero-section">
             <div class="hero-container">
@@ -69,7 +64,8 @@
                     <p>Compra y vende libros, tecnología, materiales, uniformes y herramientas con total comodidad. Conéctate con cientos de usuarios de forma rápida, directa y transparente.</p>
                     <div class="hero-actions">
                         <a href="catalogo.html" class="cta-button">Explorar Catálogo <i class="fa-solid fa-arrow-right"></i></a>
-                        <a href="registro.html" class="cta-button-secondary">Crear Cuenta</a>
+                        
+                        <a href="registro.html" class="cta-button-secondary" id="hero-auth-btn">Crear Cuenta</a>
                     </div>
                 </div>
                 <div class="hero-visual">
