@@ -48,22 +48,115 @@
             </div>
         </div>
 
+        <!-- Nuevas Estadísticas Requeridas (Módulo 6) -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-bottom: 40px;">
+            <!-- Usuarios Registrados vs Activos -->
+            <div class="metric-card" style="display: flex; flex-direction: column; justify-content: space-between;">
+                <div>
+                    <h4>Usuarios Registrados vs Activos</h4>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
+                        <div>
+                            <span style="font-size: 0.8rem; color: var(--text-secondary); display: block;">Registrados</span>
+                            <span class="value" id="metric-user-registered" style="font-size: 1.6rem;">0</span>
+                        </div>
+                        <div style="border-left: 1px solid var(--border-subtle); height: 40px; margin: 0 15px;"></div>
+                        <div>
+                            <span style="font-size: 0.8rem; color: var(--text-secondary); display: block;">Activos</span>
+                            <span class="value" id="metric-user-active" style="font-size: 1.6rem; color: var(--ucab-green-light);">0</span>
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-top: 15px; background: var(--bg-main); height: 8px; border-radius: 4px; overflow: hidden;">
+                    <div id="metric-user-ratio-bar" style="background: var(--ucab-green); height: 100%; width: 0%; transition: width 0.5s ease;"></div>
+                </div>
+            </div>
+            
+            <!-- Top 3 Productos Más Vendidos -->
+            <div class="metric-card">
+                <h4>Top 3 Productos Más Vendidos</h4>
+                <div id="metric-top-products-container" style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;">
+                    <p style="font-size: 0.85rem; color: var(--text-secondary);">Sin datos de ventas suficientes.</p>
+                </div>
+            </div>
+        </div>
+
         <div style="display: grid; grid-template-columns: 1fr; gap: 40px; align-items: start;">
             
-            <div class="profile-box" style="margin: 0; width: 100%; max-width: 100%;">
-                <h3 id="crud-title" style="margin-bottom: 15px; font-size: 1.25rem;"><i class="fa-solid fa-pen-to-square"></i> Gestión de Producto</h3>
-                <form id="crud-form">
-                    <input type="hidden" id="prod-id">
-                    <div class="input-group-colmena"><label>Título del Producto</label><input type="text" id="prod-title" required placeholder="Ej. Miel de Abejas Orgánica 500g"></div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                        <div class="input-group-colmena"><label>Precio ($)</label><input type="number" id="prod-price" step="0.01" required placeholder="45.00"></div>
-                        <div class="input-group-colmena"><label>Categoría</label><input type="text" id="prod-category" required placeholder="Ej. Comestibles u Electrónica"></div>
+            <div class="profile-box" style="margin: 0; width: 100%; max-width: 100%; border-radius: 16px; border: 1px solid var(--border-subtle); background: var(--bg-surface); padding: 30px; box-shadow: var(--shadow-sm);">
+                <h3 id="crud-title" style="margin-bottom: 20px; font-size: 1.35rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-boxes-packing" style="color: var(--ucab-green-light);"></i> Gestión de Producto
+                </h3>
+                
+                <div class="crud-two-col-layout" style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 30px; align-items: start;">
+                    <!-- Formulario de carga/edición -->
+                    <form id="crud-form" style="display: flex; flex-direction: column; gap: 20px;">
+                        <input type="hidden" id="prod-id">
+                        
+                        <div class="input-group-colmena" style="margin-bottom: 0;">
+                            <label style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary);">Título del Producto</label>
+                            <div style="position: relative; display: flex; align-items: center;">
+                                <i class="fa-solid fa-tag" style="position: absolute; left: 14px; color: var(--text-muted); font-size: 0.9rem;"></i>
+                                <input type="text" id="prod-title" required placeholder="Ej. Miel de Abejas Orgánica 500g" style="padding-left: 40px; width: 100%; padding-top: 12px; padding-bottom: 12px;">
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 20px;">
+                            <div class="input-group-colmena" style="margin-bottom: 0;">
+                                <label style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary);">Precio ($)</label>
+                                <div style="position: relative; display: flex; align-items: center;">
+                                    <i class="fa-solid fa-dollar-sign" style="position: absolute; left: 14px; color: var(--text-muted); font-size: 0.9rem;"></i>
+                                    <input type="number" id="prod-price" step="0.01" required placeholder="45.00" style="padding-left: 36px; width: 100%; padding-top: 12px; padding-bottom: 12px;">
+                                </div>
+                            </div>
+                            
+                            <div class="input-group-colmena" style="margin-bottom: 0;">
+                                <label style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary);">Categoría</label>
+                                <div style="position: relative; display: flex; align-items: center;">
+                                    <i class="fa-solid fa-list" style="position: absolute; left: 14px; color: var(--text-muted); font-size: 0.9rem;"></i>
+                                    <input type="text" id="prod-category" required placeholder="Ej. Comestibles" style="padding-left: 40px; width: 100%; padding-top: 12px; padding-bottom: 12px;">
+                                </div>
+                            </div>
+
+                            <div class="input-group-colmena" style="margin-bottom: 0;">
+                                <label style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary);">Stock Físico</label>
+                                <div style="position: relative; display: flex; align-items: center;">
+                                    <i class="fa-solid fa-layer-group" style="position: absolute; left: 14px; color: var(--text-muted); font-size: 0.9rem;"></i>
+                                    <input type="number" id="prod-stock" required placeholder="25" style="padding-left: 40px; width: 100%; padding-top: 12px; padding-bottom: 12px;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="input-group-colmena" style="margin-bottom: 0;">
+                            <label style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary);">URL Imagen del Artículo</label>
+                            <div style="position: relative; display: flex; align-items: center;">
+                                <i class="fa-solid fa-image" style="position: absolute; left: 14px; color: var(--text-muted); font-size: 0.9rem;"></i>
+                                <input type="url" id="prod-image" placeholder="Dejar vacío para usar imagen de muestra" style="padding-left: 40px; width: 100%; padding-top: 12px; padding-bottom: 12px;">
+                            </div>
+                        </div>
+
+                        <div class="input-group-colmena" style="margin-bottom: 0;">
+                            <label style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary);">Descripción</label>
+                            <textarea id="prod-description" rows="3" required placeholder="Detalles, peso, características principales del artículo..." style="width: 100%; padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); background: var(--bg-main); color: var(--text-primary); resize: none; font-family: var(--font-family); outline: none; transition: var(--transition);"></textarea>
+                        </div>
+                        
+                        <div style="display: flex; gap: 12px; margin-top: 10px;" id="crud-button-group">
+                            <button type="submit" id="btn-crud-submit" class="btn-primary-colmena" style="flex: 2; padding: 14px; justify-content: center; font-size: 1rem; font-weight: 700; border-radius: var(--radius-md); box-shadow: var(--shadow-sm);">
+                                Crear Producto
+                            </button>
+                            <button type="button" id="btn-crud-cancel" class="btn-logout-colmena hidden" style="flex: 1; padding: 14px; justify-content: center; font-size: 1rem; font-weight: 700; border-radius: var(--radius-md); box-shadow: var(--shadow-sm); cursor: pointer;">
+                                Cancelar
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Columna de vista previa -->
+                    <div class="crud-preview-container" style="background: var(--bg-main); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100%; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); height: 100%;">
+                        <h4 style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); margin-bottom: 20px; width: 100%; text-align: center;"><i class="fa-solid fa-eye" style="color: var(--ucab-green-light)"></i> Vista Previa en Tienda</h4>
+                        <div id="crud-preview-card-wrapper" style="width: 100%; max-width: 240px; display: flex; justify-content: center;">
+                            <!-- Live Card Rendered Here -->
+                        </div>
                     </div>
-                    <div class="input-group-colmena"><label>Descripción</label><textarea id="prod-description" rows="3" required placeholder="Detalles, peso, características principales..."></textarea></div>
-                    <div class="input-group-colmena"><label>URL Imagen del Artículo</label><input type="url" id="prod-image" placeholder="Dejar vacío para usar imagen por defecto de muestra"></div>
-                    <div class="input-group-colmena"><label>Stock Disponible Físico</label><input type="number" id="prod-stock" required placeholder="25"></div>
-                    <button type="submit" id="btn-crud-submit" class="btn-primary-colmena w-100" style="margin-top: 10px; padding: 12px; justify-content: center;">Crear Producto</button>
-                </form>
+                </div>
             </div>
 
             <div class="profile-box" style="margin: 0; width: 100%; max-width: 100%; overflow-x: auto;">
@@ -89,6 +182,33 @@
             <div id="admin-orders-container" style="display: flex; flex-direction: column; gap: 16px;"></div>
         </div>
     </main>
+
+    <footer class="main-footer">
+        <div class="footer-container">
+            <div class="footer-top-row">
+                <div class="footer-brand">
+                    <span class="logo-footer">La <span>Colmena</span></span>
+                    <p>Tu punto de encuentro comercial moderno, seguro y descentralizado.</p>
+                </div>
+                <div class="footer-links-group">
+                    <a href="#">Privacidad</a>
+                    <a href="#">Términos</a>
+                    <a href="#">Ayuda</a>
+                </div>
+                <div class="footer-socials">
+                    <a href="#" aria-label="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
+                    <a href="#" aria-label="Twitter"><i class="fa-brands fa-x-twitter"></i></a>
+                    <a href="#" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
+                </div>
+            </div>
+            <div class="footer-bottom-row">
+                <p>&copy; 2026 La Colmena. Todos los derechos reservados.</p>
+                <div class="network-badge-colmena" id="network-status">
+                    <i id="network-icon" class="fa fa-circle"></i> <span id="network-text">Verificando conexión...</span>
+                </div>
+            </div>
+        </div>
+    </footer>
 
     <script src="app.js"></script>
 </body>

@@ -12,6 +12,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     applyThemeEngine(AppState.theme);
     syncNetworkBadge();
     
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js')
+            .then(reg => console.log('Service Worker registrado con éxito:', reg.scope))
+            .catch(err => console.error('Error al registrar Service Worker:', err));
+    }
+    
     try {
         await guaranteeCacheData();
     } catch (e) {
@@ -27,12 +33,26 @@ document.addEventListener('DOMContentLoaded', async () => {
 function initRouting() {
     const path = window.location.pathname;
     
+    // Si es Administrador y está intentando acceder a una página de la tienda, redirigir
+    const isStorePage = path.endsWith('index.html') || path.endsWith('catalogo.html') || path.endsWith('detalle.html') || path === '/' || path.endsWith('/');
+    if (isStorePage && AppState.user && AppState.user.role === 'Administrador') {
+        window.location.href = 'admin.html';
+        return;
+    }
+    
     if (path.endsWith('admin.html')) {
         if (!AppState.user || AppState.user.role !== 'Administrador') {
             alert("Acceso denegado: Se requieren privilegios administrativos.");
             window.location.href = 'index.html';
             return;
         }
+    }
+
+    // Cambiar la dirección del logo de "La Colmena" a admin.html para administradores
+    if (AppState.user && AppState.user.role === 'Administrador') {
+        document.querySelectorAll('.logo, a.logo').forEach(el => {
+            el.href = 'admin.html';
+        });
     }
 
     if (path.endsWith('index.html') || path === '/' || path.endsWith('/')) {
@@ -166,18 +186,21 @@ function renderNavProfileWidget() {
                 <i class="fa-solid fa-chevron-down nav-dropdown-arrow" style="font-size:0.7rem;"></i>
                 <div id="nav-profile-dropdown" class="nav-profile-dropdown-menu hidden" style="position:absolute; top:40px; right:0; background:var(--bg-surface); border:1px solid var(--border-subtle); padding:10px; border-radius:8px; display:flex; flex-direction:column; gap:8px; z-index:1000; min-width:140px; box-shadow:var(--shadow-md);">
                     <a href="registro.html" style="text-decoration:none; color:var(--text-primary); font-size:0.85rem;"><i class="fa-solid fa-user"></i> Mi Perfil</a>
-                    ${AppState.user.role === 'Administrador' ? '<a href="admin.html" style="text-decoration:none; color:var(--text-primary); font-size:0.85rem;"><i class="fa-solid fa-lock"></i> Panel Admin</a>' : ''}
                     <hr style="border:0; border-top:1px solid var(--border-subtle); margin:4px 0;">
                     <button onclick="ejecutarCierreSesion()" style="background:transparent; border:none; text-align:left; color:#EF4444; cursor:pointer; font-size:0.85rem; padding:0;"><i class="fa-solid fa-arrow-right-from-bracket"></i> Salir</button>
                 </div>
             </div>
         `;
     } else {
-        widget.innerHTML = `
-            <a href="registro.html" class="btn-primary-colmena" id="nav-login-btn" style="text-decoration:none; display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; font-size: 0.85rem; border-radius: 8px;">
-                <i class="fa fa-user-circle"></i> <span>Ingresar</span>
-            </a>
-        `;
+        if (window.location.pathname.endsWith('registro.html')) {
+            widget.innerHTML = '';
+        } else {
+            widget.innerHTML = `
+                <a href="registro.html" class="btn-primary-colmena" id="nav-login-btn" style="text-decoration:none; display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; font-size: 0.85rem; border-radius: 8px;">
+                    <i class="fa fa-user-circle"></i> <span>Ingresar</span>
+                </a>
+            `;
+        }
     }
 
     const heroAuthBtn = document.getElementById('hero-auth-btn');
@@ -212,14 +235,18 @@ function renderCartSidebarItems() {
     }
     let totalPrecio = 0;
     container.innerHTML = AppState.cart.map(item => {
-        totalPrecio += item.price * item.cantidad;
+        const subtotal = item.price * item.cantidad;
+        totalPrecio += subtotal;
         return `
             <div class="cart-item-row" style="display:flex; gap:12px; padding:12px 0; border-bottom:1px solid var(--border-subtle); align-items:center;">
                 <img src="${item.image}" style="width:50px; height:50px; object-fit:contain; background:#fff; padding:4px; border-radius:6px;" alt="${item.title}">
                 <div class="cart-item-info" style="flex:1;">
                     <h4 style="font-size:0.85rem; font-weight:600; line-height:1.3; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${item.title}</h4>
-                    <span class="cart-item-price" style="font-size:0.9rem; font-weight:700; color:var(--ucab-green-light); display:block; margin:2px 0;">$${item.price.toFixed(2)}</span>
-                    <div class="cart-item-qty-selector" style="display:flex; align-items:center; gap:8px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2px;">
+                        <span class="cart-item-price" style="font-size:0.8rem; font-weight:700; color:var(--text-secondary);">$${item.price.toFixed(2)}</span>
+                        <span style="font-size:0.8rem; font-weight:800; color:var(--ucab-green-light);">Sub: $${subtotal.toFixed(2)}</span>
+                    </div>
+                    <div class="cart-item-qty-selector" style="display:flex; align-items:center; gap:8px; margin-top:4px;">
                         <button onclick="alterarCantidadCarrito(${item.id}, -1)" style="width:24px; height:24px; border-radius:4px; border:1px solid var(--border-subtle); background:var(--bg-main); font-weight:bold; cursor:pointer;">-</button>
                         <span style="font-size:0.85rem; font-weight:600;">${item.cantidad}</span>
                         <button onclick="alterarCantidadCarrito(${item.id}, 1)" style="width:24px; height:24px; border-radius:4px; border:1px solid var(--border-subtle); background:var(--bg-main); font-weight:bold; cursor:pointer;">+</button>
@@ -306,6 +333,10 @@ function abrirPasarelaPagoModal() {
 }
 
 function agregarAlCarritoReal(productId) {
+    if (AppState.user && AppState.user.role === 'Administrador') {
+        alert("Los administradores no pueden agregar productos al carrito ni realizar compras.");
+        return;
+    }
     const targetProduct = AppState.products.find(p => Number(p.id) === Number(productId));
     if (!targetProduct || targetProduct.stock <= 0) {
         alert("Lo sentimos, producto sin stock disponible.");
@@ -355,20 +386,23 @@ function eliminarDelCarritoTotal(id) {
 function renderApiFeaturedProducts() {
     const grid = document.getElementById('featured-products-grid');
     if (!grid) return;
-    const destacados = AppState.products.slice(0, 4);
+    // Ordenar los productos por calificación (rating.rate) de forma descendente y tomar los primeros 4
+    const destacados = [...AppState.products]
+        .sort((a, b) => (b.rating?.rate || 0) - (a.rating?.rate || 0))
+        .slice(0, 4);
     if (destacados.length === 0) {
         grid.innerHTML = `<p style="grid-column:1/-1; text-align:center; color:var(--text-secondary);">Descargando productos de la API...</p>`;
         return;
     }
     grid.innerHTML = destacados.map(p => `
         <article class="product-card">
-            <div class="product-image-container">
+            <div class="product-image-wrapper">
                 <img src="${p.image}" alt="${p.title}" loading="lazy">
             </div>
-            <div class="product-card-body">
-                <span class="product-category-tag">${p.category}</span>
-                <h3 class="product-title-heading">${p.title}</h3>
-                <div class="product-rating-row">
+            <div class="product-info-payload">
+                <span class="product-tag-category">${p.category}</span>
+                <h3>${p.title}</h3>
+                <div class="rating-row-stars">
                     <span class="star-rating-numeric">★ ${p.rating.rate.toFixed(1)}</span>
                     <span class="stock-badge ${p.stock > 0 ? 'in-stock' : 'no-stock'}">${p.stock > 0 ? `Stock: ${p.stock}` : 'Agotado'}</span>
                 </div>
@@ -431,13 +465,13 @@ function initCatalogoPage() {
         
         grid.innerHTML = filtrados.map(p => `
             <article class="product-card">
-                <div class="product-image-container">
+                <div class="product-image-wrapper">
                     <img src="${p.image}" alt="${p.title}">
                 </div>
-                <div class="product-card-body">
-                    <span class="product-category-tag">${p.category}</span>
-                    <h3 class="product-title-heading">${p.title}</h3>
-                    <div class="product-rating-row">
+                <div class="product-info-payload">
+                    <span class="product-tag-category">${p.category}</span>
+                    <h3>${p.title}</h3>
+                    <div class="rating-row-stars">
                         <span class="star-rating-numeric">★ ${p.rating.rate.toFixed(1)}</span>
                         <span class="stock-badge ${p.stock > 0 ? 'in-stock' : 'no-stock'}">${p.stock > 0 ? `Stock: ${p.stock}` : 'Sin Stock'}</span>
                     </div>
@@ -470,45 +504,59 @@ function initDetallePage() {
     
     const prodReviews = AppState.reviews[productId] || [];
     const reviewsHtml = prodReviews.map(r => `
-        <div style="background:var(--bg-main); padding:12px; border-radius:8px; margin-bottom:10px; border:1px solid var(--border-subtle)">
-            <div style="display:flex; justify-content:space-between; font-size:0.85rem; font-weight:700;"><span>${r.userName}</span><span style="color:var(--ucab-gold);">${'★'.repeat(r.stars)}</span></div>
-            <p style="font-size:0.9rem; color:var(--text-secondary); margin-top:4px;">${r.comment}</p>
+        <div class="review-card" style="background:var(--bg-main); padding:16px; border-radius:12px; border:1px solid var(--border-subtle); margin-bottom:12px; box-shadow:var(--shadow-sm); display:flex; gap:12px; align-items:start; transition: var(--transition);">
+            <div style="width:36px; height:36px; border-radius:50%; background:var(--bg-surface); color:var(--ucab-green-light); font-weight:700; display:flex; align-items:center; justify-content:center; border:1px solid var(--border-subtle); flex-shrink:0;">
+                ${r.userName.charAt(0).toUpperCase()}
+            </div>
+            <div style="flex:1;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; flex-wrap:wrap; gap:4px;">
+                    <strong style="font-size:0.9rem; color:var(--text-primary);">${r.userName}</strong>
+                    <span style="color:var(--ucab-gold); font-size:0.8rem; letter-spacing:1px;">${'★'.repeat(r.stars)}${'☆'.repeat(5 - r.stars)}</span>
+                </div>
+                <p style="font-size:0.88rem; color:var(--text-secondary); line-height:1.4; margin:0;">${r.comment}</p>
+            </div>
         </div>
-    `).join('') || '<p style="color:var(--text-muted); font-size:0.9rem;">No hay valoraciones en esta colmena todavía.</p>';
+    `).join('') || '<p style="color:var(--text-muted); font-size:0.9rem; font-style:italic;">No hay valoraciones en esta colmena todavía.</p>';
     
     container.innerHTML = `
         <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:40px; align-items:start; padding:20px 0;">
-            <div style="background:#FFF; padding:20px; border-radius:12px; border:1px solid var(--border-subtle); text-align:center;">
-                <img src="${prod.image}" style="max-height:380px; max-width:100%; object-fit:contain;" alt="${prod.title}">
+            <div style="background:var(--bg-surface); padding:24px; border-radius:var(--radius-lg); border:1px solid var(--border-subtle); text-align:center; box-shadow:var(--shadow-md); display:flex; justify-content:center; align-items:center; min-height:400px;">
+                <div style="background:#FFFFFF; padding:20px; border-radius:var(--radius-md); width:100%; height:100%; display:flex; align-items:center; justify-content:center; min-height:350px;">
+                    <img src="${prod.image}" style="max-height:310px; max-width:100%; object-fit:contain;" alt="${prod.title}">
+                </div>
             </div>
             <div>
-                <span class="product-category-tag" style="font-size:0.8rem;">${prod.category.toUpperCase()}</span>
+                <span class="product-tag-category" style="font-size:0.8rem;">${prod.category.toUpperCase()}</span>
                 <h2 style="font-size:1.8rem; font-weight:800; line-height:1.2; margin:8px 0 15px 0;">${prod.title}</h2>
                 <div style="font-size:1.75rem; font-weight:800; color:var(--text-primary); margin-bottom:15px;">$${prod.price.toFixed(2)}</div>
                 <p style="color:var(--text-secondary); line-height:1.6; margin-bottom:25px;">${prod.description}</p>
                 <div style="margin-bottom:25px;">
                     <span class="stock-badge ${prod.stock > 0 ? 'in-stock' : 'no-stock'}" style="padding:6px 12px; font-size:0.85rem;">${prod.stock > 0 ? `Unidades Disponibles: ${prod.stock}` : 'Temporalmente Agotado'}</span>
                 </div>
-                <button onclick="agregarAlCarritoReal(${prod.id})" class="btn-primary-colmena" style="padding:14px 28px; width:100%; max-width:280px; justify-content:center; font-size:1rem;" ${prod.stock <= 0 ? 'disabled' : ''}>
-                    <i class="fa fa-shopping-basket"></i> Agregar al Carrito
+                <button onclick="agregarAlCarritoReal(${prod.id})" class="btn-primary-colmena" style="padding:14px 28px; width:100%; max-width:280px; justify-content:center; font-size:1rem;" ${(prod.stock <= 0 || (AppState.user && AppState.user.role === 'Administrador')) ? 'disabled' : ''}>
+                    <i class="fa fa-shopping-basket"></i> ${AppState.user && AppState.user.role === 'Administrador' ? 'Vista Administrador (Sin compras)' : 'Agregar al Carrito'}
                 </button>
                 
                 <div style="margin-top:40px; border-top:1px solid var(--border-subtle); padding-top:25px;">
-                    <h3 style="font-size:1.2rem; margin-bottom:15px;"><i class="fa-regular fa-comments"></i> Valoraciones de la Comunidad</h3>
+                    <h3 style="font-size:1.2rem; margin-bottom:15px; font-weight:700;"><i class="fa-regular fa-comments"></i> Valoraciones de la Comunidad</h3>
                     <div style="margin-bottom:20px;">${reviewsHtml}</div>
-                    <form id="review-form" style="background:var(--bg-surface); padding:16px; border-radius:12px; border:1px solid var(--border-subtle)">
-                        <h4 style="font-size:0.95rem; margin-bottom:10px;">Añadir tu Opinión</h4>
-                        <div class="input-group-colmena">
-                            <label>Calificación</label>
-                            <select id="review-stars" class="select-colmena" style="padding:8px; border-radius:6px; background:var(--bg-main); color:var(--text-primary); border:1px solid var(--border-subtle)">
-                                <option value="5">★★★★★ (5)</option><option value="4">★★★★ (4)</option><option value="3">★★★ (3)</option><option value="2">★★ (2)</option><option value="1">★ (1)</option>
+                    <form id="review-form" style="background:var(--bg-surface); padding:20px; border-radius:16px; border:1px solid var(--border-subtle); box-shadow:var(--shadow-sm); margin-top:20px;">
+                        <h4 style="font-size:1.05rem; margin-bottom:15px; font-weight:700; color:var(--text-primary); display:flex; align-items:center; gap:8px;"><i class="fa-solid fa-pen-nib" style="color:var(--ucab-green-light)"></i> Añadir tu Opinión</h4>
+                        <div class="input-group-colmena" style="margin-bottom:15px;">
+                            <label style="font-size:0.75rem; font-weight:700; letter-spacing:0.5px; text-transform:uppercase; margin-bottom:6px;">Calificación</label>
+                            <select id="review-stars" class="select-colmena" style="padding:10px; border-radius:8px; background:var(--bg-main); color:var(--text-primary); border:1px solid var(--border-subtle); outline:none; font-weight:600;">
+                                <option value="5">★★★★★ (5 - Excelente)</option>
+                                <option value="4">★★★★☆ (4 - Bueno)</option>
+                                <option value="3">★★★☆☆ (3 - Regular)</option>
+                                <option value="2">★★☆☆☆ (2 - Malo)</option>
+                                <option value="1">★☆☆☆☆ (1 - Muy Malo)</option>
                             </select>
                         </div>
-                        <div class="input-group-colmena">
-                            <label>Comentario</label>
-                            <textarea id="review-comment" rows="3" required placeholder="Escribe aquí tu reseña sobre el producto..."></textarea>
+                        <div class="input-group-colmena" style="margin-bottom:20px;">
+                            <label style="font-size:0.75rem; font-weight:700; letter-spacing:0.5px; text-transform:uppercase; margin-bottom:6px;">Comentario</label>
+                            <textarea id="review-comment" rows="3" required placeholder="Comparte tu experiencia con este producto..." style="padding:12px; border-radius:8px; background:var(--bg-main); color:var(--text-primary); border:1px solid var(--border-subtle); outline:none; resize:none; font-family:var(--font-family); font-size:0.9rem;"></textarea>
                         </div>
-                        <button type="submit" class="btn-primary-colmena" style="margin-top:10px; padding:10px 16px;">Publicar Comentario</button>
+                        <button type="submit" class="btn-primary-colmena w-100" style="padding:12px; justify-content:center; font-size:0.9rem; font-weight:700;">Publicar Comentario</button>
                     </form>
                 </div>
             </div>
@@ -538,6 +586,7 @@ function procesarOrdenCompraCarrito() {
     const nuevaVenta = {
         id: AppState.ventas.length + 1001,
         userName: AppState.user.name,
+        userEmail: AppState.user.email,
         address: AppState.user.address || "Dirección del Campus UCAB",
         date: new Date().toLocaleDateString('es-VE', { hour: '2-digit', minute: '2-digit' }),
         items: [...AppState.cart],
@@ -613,8 +662,28 @@ function initAuthModule() {
         if (editAvatar) editAvatar.value = AppState.user.avatar || '';
         if (editAddress) editAddress.value = AppState.user.address || '';
 
-        // --- NUEVO: Renderizar el historial de compras del usuario ---
-        renderHistorialComprasUsuario();
+        // Si es Administrador, ocultar pedidos e input de dirección, y centrar el formulario de perfil
+        if (AppState.user.role === 'Administrador') {
+            const historyCol = document.getElementById('profile-history-col');
+            if (historyCol) historyCol.style.display = 'none';
+            
+            const addressGroup = document.getElementById('edit-address-group');
+            if (addressGroup) {
+                addressGroup.style.display = 'none';
+                const addressInput = document.getElementById('edit-address');
+                if (addressInput) addressInput.removeAttribute('required');
+            }
+            
+            const gridContainer = document.getElementById('profile-grid-container');
+            if (gridContainer) {
+                gridContainer.style.gridTemplateColumns = '1fr';
+                gridContainer.style.maxWidth = '550px';
+                gridContainer.style.margin = '0 auto';
+            }
+        } else {
+            // --- NUEVO: Renderizar el historial de compras del usuario ---
+            renderHistorialComprasUsuario();
+        }
     }
     
     document.getElementById('register-form')?.addEventListener('submit', (e) => {
@@ -622,8 +691,14 @@ function initAuthModule() {
         const name = document.getElementById('reg-name').value.trim();
         const email = document.getElementById('reg-email').value.trim();
         const password = document.getElementById('reg-password').value;
-        const role = document.getElementById('reg-role').value;
+        const confirmPassword = document.getElementById('reg-password-confirm').value;
+        const role = 'Usuario regular';
         const fb = document.getElementById('auth-global-feedback');
+        
+        if (password !== confirmPassword) {
+            mostrarMensajeFeedback(fb, "Las contraseñas no coinciden.", "error");
+            return;
+        }
         
         let db = JSON.parse(localStorage.getItem('colmena_users_db'));
         if (db.some(u => u.email === email)) {
@@ -671,9 +746,21 @@ function initAuthModule() {
         let db = JSON.parse(localStorage.getItem('colmena_users_db'));
         const userIndex = db.findIndex(u => u.email === AppState.user.email);
         if (userIndex > -1) {
-            db[userIndex].name = document.getElementById('edit-name').value.trim();
+            const oldName = AppState.user.name;
+            const newName = document.getElementById('edit-name').value.trim();
+            
+            db[userIndex].name = newName;
             db[userIndex].avatar = document.getElementById('edit-avatar').value.trim();
             db[userIndex].address = document.getElementById('edit-address').value.trim();
+            
+            // Actualizar también el nombre del usuario en su historial de ventas (para evitar que se pierdan las compras asociadas)
+            AppState.ventas.forEach(v => {
+                if (v.userEmail === AppState.user.email || v.userName === oldName) {
+                    v.userName = newName;
+                    v.userEmail = AppState.user.email; // Asegurar que tenga el email asociado
+                }
+            });
+            localStorage.setItem('colmena_ventas', JSON.stringify(AppState.ventas));
             
             localStorage.setItem('colmena_users_db', JSON.stringify(db));
             sessionStorage.setItem('activeUser', JSON.stringify(db[userIndex]));
@@ -682,13 +769,74 @@ function initAuthModule() {
             window.location.reload();
         }
     });
+
+    document.getElementById('forgot-form')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const email = document.getElementById('forgot-email').value.trim();
+        const fb = document.getElementById('auth-global-feedback');
+        let db = JSON.parse(localStorage.getItem('colmena_users_db')) || [];
+        const encontrado = db.find(u => u.email === email);
+        if (!encontrado) {
+            mostrarMensajeFeedback(fb, "Este correo electrónico no está registrado en la Colmena.", "error");
+            return;
+        }
+        
+        const resetEmailHidden = document.getElementById('reset-email-hidden');
+        const resetEmailDisplay = document.getElementById('reset-email-display');
+        if (resetEmailHidden) resetEmailHidden.value = email;
+        if (resetEmailDisplay) resetEmailDisplay.textContent = email;
+        
+        mostrarMensajeFeedback(fb, "Cuenta localizada. Establece tu nueva contraseña.", "success");
+        document.getElementById('forgot-email').value = '';
+        
+        setTimeout(() => {
+            fb.classList.add('hidden');
+            switchAuthTab('reset');
+        }, 1200);
+    });
+
+    document.getElementById('reset-form')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const email = document.getElementById('reset-email-hidden').value;
+        const newPassword = document.getElementById('reset-password').value;
+        const confirmPassword = document.getElementById('reset-password-confirm').value;
+        const fb = document.getElementById('auth-global-feedback');
+        
+        if (newPassword !== confirmPassword) {
+            mostrarMensajeFeedback(fb, "Las contraseñas no coinciden.", "error");
+            return;
+        }
+        
+        let db = JSON.parse(localStorage.getItem('colmena_users_db')) || [];
+        const idx = db.findIndex(u => u.email === email);
+        if (idx > -1) {
+            db[idx].password = newPassword;
+            localStorage.setItem('colmena_users_db', JSON.stringify(db));
+            
+            if (AppState.user && AppState.user.email === email) {
+                AppState.user.password = newPassword;
+                sessionStorage.setItem('activeUser', JSON.stringify(AppState.user));
+            }
+            
+            mostrarMensajeFeedback(fb, "Contraseña reestablecida con éxito. Redirigiendo...", "success");
+            document.getElementById('reset-password').value = '';
+            document.getElementById('reset-password-confirm').value = '';
+            
+            setTimeout(() => {
+                fb.classList.add('hidden');
+                switchAuthTab('login');
+            }, 1500);
+        } else {
+            mostrarMensajeFeedback(fb, "No se pudo actualizar la contraseña.", "error");
+        }
+    });
 }
 
 function renderHistorialComprasUsuario() {
     const container = document.getElementById('user-orders-history-container');
     if (!container) return;
 
-    const misCompras = AppState.ventas.filter(v => v.userName === AppState.user.name);
+    const misCompras = AppState.ventas.filter(v => v.userEmail === AppState.user.email || v.userName === AppState.user.name);
 
     if (misCompras.length === 0) {
         container.innerHTML = `
@@ -732,12 +880,14 @@ function switchAuthTab(target) {
     const login = document.getElementById('login-form');
     const register = document.getElementById('register-form');
     const forgot = document.getElementById('forgot-form');
+    const reset = document.getElementById('reset-form');
     const tabLogin = document.getElementById('tab-login');
     const tabReg = document.getElementById('tab-register');
     
     login?.classList.add('hidden');
     register?.classList.add('hidden');
     forgot?.classList.add('hidden');
+    reset?.classList.add('hidden');
     tabLogin?.classList.remove('active');
     tabReg?.classList.remove('active');
     
@@ -749,6 +899,8 @@ function switchAuthTab(target) {
         tabReg?.classList.add('active');
     } else if (target === 'forgot') {
         forgot?.classList.remove('hidden');
+    } else if (target === 'reset') {
+        reset?.classList.remove('hidden');
     }
 }
 
@@ -769,6 +921,16 @@ function initAdminPage() {
     renderMetricasAdmin();
     renderInventarioTablaAdmin();
     renderListaOrdenesAdmin();
+    
+    // Escuchar cambios para actualizar la vista previa interactiva en vivo
+    const previewInputs = ['prod-title', 'prod-price', 'prod-category', 'prod-image', 'prod-stock'];
+    previewInputs.forEach(id => {
+        document.getElementById(id)?.addEventListener('input', updateProductPreview);
+    });
+    updateProductPreview();
+    
+    // Configurar botón para cancelar edición y resetear formulario
+    document.getElementById('btn-crud-cancel')?.addEventListener('click', resetFormCrud);
     
     document.getElementById('crud-form')?.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -798,7 +960,7 @@ function initAdminPage() {
         }
         
         localStorage.setItem('products', JSON.stringify(AppState.products));
-        alert("Catálogo actualizado.");
+        alert("Catálogo actualizado con éxito.");
         window.location.reload();
     });
 }
@@ -815,6 +977,71 @@ function renderMetricasAdmin() {
     if (mVentas) mVentas.textContent = totalVentas;
     if (mIngresos) mIngresos.textContent = `$${totalIngresos.toFixed(2)}`;
     if (mProductos) mProductos.textContent = totalProds;
+
+    // --- NUEVO: Usuarios Registrados vs Activos (Módulo 6) ---
+    const dbUsers = JSON.parse(localStorage.getItem('colmena_users_db')) || [];
+    const registeredCount = dbUsers.length;
+    
+    const activeUsersSet = new Set();
+    if (AppState.user) activeUsersSet.add(AppState.user.name);
+    AppState.ventas.forEach(v => activeUsersSet.add(v.userName));
+    
+    let activeCount = activeUsersSet.size;
+    if (activeCount === 0 && registeredCount > 0) activeCount = 1;
+    if (activeCount > registeredCount) activeCount = registeredCount;
+
+    const mUserReg = document.getElementById('metric-user-registered');
+    const mUserAct = document.getElementById('metric-user-active');
+    const mUserBar = document.getElementById('metric-user-ratio-bar');
+    
+    if (mUserReg) mUserReg.textContent = registeredCount;
+    if (mUserAct) mUserAct.textContent = activeCount;
+    if (mUserBar && registeredCount > 0) {
+        const pct = Math.min(100, Math.round((activeCount / registeredCount) * 100));
+        mUserBar.style.width = `${pct}%`;
+    }
+
+    // --- NUEVO: Top 3 Productos Más Vendidos (Módulo 6) ---
+    const productSalesMap = {};
+    AppState.ventas.forEach(v => {
+        if (v.items && Array.isArray(v.items)) {
+            v.items.forEach(item => {
+                const id = item.id;
+                const title = item.title;
+                const qty = item.cantidad || 0;
+                if (!productSalesMap[id]) {
+                    productSalesMap[id] = { id, title, qty: 0 };
+                }
+                productSalesMap[id].qty += qty;
+            });
+        }
+    });
+
+    const sortedSales = Object.values(productSalesMap).sort((a, b) => b.qty - a.qty);
+    const top3 = sortedSales.slice(0, 3);
+    const topContainer = document.getElementById('metric-top-products-container');
+    
+    if (topContainer) {
+        if (top3.length === 0) {
+            topContainer.innerHTML = `<p style="font-size: 0.85rem; color: var(--text-secondary);">No se registran ventas en el sistema aún.</p>`;
+        } else {
+            const maxQty = top3[0].qty || 1;
+            topContainer.innerHTML = top3.map((p, index) => {
+                const pct = Math.round((p.qty / maxQty) * 100);
+                return `
+                    <div style="font-size: 0.85rem; margin-bottom: 5px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+                           <span style="font-weight: 600; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 75%;" title="${p.title}">#${index + 1} ${p.title}</span>
+                           <strong style="color: var(--ucab-green-light);">${p.qty} uds</strong>
+                        </div>
+                        <div style="background: var(--bg-main); height: 6px; border-radius: 3px; overflow: hidden;">
+                           <div style="background: var(--ucab-green); height: 100%; width: ${pct}%; transition: width 0.5s ease;"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+    }
 }
 
 function renderInventarioTablaAdmin() {
@@ -862,6 +1089,14 @@ function cargarProductoParaEditar(id) {
     
     if (btnSubmit) btnSubmit.textContent = "Actualizar Cambios del Producto";
     if (cTitle) cTitle.innerHTML = `<i class="fa-solid fa-pen-to-square"></i> Editando: ${p.title}`;
+    
+    // Mostrar el botón de cancelar edición
+    const btnCancel = document.getElementById('btn-crud-cancel');
+    if (btnCancel) btnCancel.classList.remove('hidden');
+    
+    // Forzar actualización de la vista previa interactiva
+    updateProductPreview();
+    
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -907,4 +1142,58 @@ function cambiarEstadoEnvio(ordenId, nuevoEstado) {
         localStorage.setItem('colmena_ventas', JSON.stringify(AppState.ventas));
         alert(`Estado de la orden #${ordenId} modificado a: ${nuevoEstado}`);
     }
+}
+
+function updateProductPreview() {
+    const titleVal = document.getElementById('prod-title')?.value.trim() || "Título del Producto";
+    const priceVal = parseFloat(document.getElementById('prod-price')?.value) || 0;
+    const catVal = document.getElementById('prod-category')?.value.trim() || "Categoría";
+    let imgVal = document.getElementById('prod-image')?.value.trim();
+    const stockVal = parseInt(document.getElementById('prod-stock')?.value) || 0;
+
+    if (!imgVal) {
+        imgVal = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400";
+    }
+
+    const previewWrapper = document.getElementById('crud-preview-card-wrapper');
+    if (!previewWrapper) return;
+
+    previewWrapper.innerHTML = `
+        <article class="product-card" style="margin: 0; width: 100%; box-shadow: var(--shadow-md);">
+            <div class="product-image-wrapper">
+                <img src="${imgVal}" alt="${titleVal}">
+            </div>
+            <div class="product-info-payload">
+                <span class="product-tag-category">${catVal}</span>
+                <h3>${titleVal}</h3>
+                <div class="rating-row-stars">
+                    <span class="star-rating-numeric">★ 5.0</span>
+                    <span class="stock-badge ${stockVal > 0 ? 'in-stock' : 'no-stock'}">${stockVal > 0 ? `Stock: ${stockVal}` : 'Agotado'}</span>
+                </div>
+                <div class="product-footer-action">
+                    <div class="product-price-value">$${priceVal.toFixed(2)}</div>
+                    <span class="view-more-link-btn" style="cursor: default;"><i class="fa-solid fa-circle-info"></i> Detalles</span>
+                </div>
+            </div>
+        </article>
+    `;
+}
+
+function resetFormCrud() {
+    const form = document.getElementById('crud-form');
+    if (form) form.reset();
+    
+    const pId = document.getElementById('prod-id');
+    if (pId) pId.value = '';
+    
+    const btnSubmit = document.getElementById('btn-crud-submit');
+    if (btnSubmit) btnSubmit.textContent = "Crear Producto";
+    
+    const btnCancel = document.getElementById('btn-crud-cancel');
+    if (btnCancel) btnCancel.classList.add('hidden');
+    
+    const cTitle = document.getElementById('crud-title');
+    if (cTitle) cTitle.innerHTML = `<i class="fa-solid fa-boxes-packing" style="color: var(--ucab-green-light);"></i> Gestión de Producto`;
+    
+    updateProductPreview();
 }

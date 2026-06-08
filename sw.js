@@ -1,34 +1,40 @@
 /**
  * @file sw.js
- * @description Service Worker para soporte Offline Real (Estrategia: Cache-First fallando a Red)
+ * @description Service Worker con tolerancia a fallos de precarga, ignorado de query params y soporte offline avanzado.
  */
 
-const CACHE_NAME = 'lacolmena-ucab-v1';
+const CACHE_NAME = 'lacolmena-ucab-v5';
 const ASSETS_TO_CACHE = [
-    '/',
-    '/index.html',
-    '/catalogo.html',
-    '/detalle.html',
-    '/registro.html',
-    '/styles.css',
-    '/app.js',
+    'index.html',
+    'catalogo.html',
+    'detalle.html',
+    'registro.html',
+    'admin.html',
+    'styles.css',
+    'app.js',
     'https://fonts.googleapis.com/css2?family=Inter:wght=400;500;600;700;800&display=swap',
-    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css'
+    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'
 ];
 
-// Evento de Instalación: Guarda los archivos esenciales en la caché del navegador
+// Evento de Instalación: Guarda los archivos esenciales en la caché tolerando fallos individuales
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then((cache) => {
-                console.log('[Service Worker] Precachando archivos base');
-                return cache.addAll(ASSETS_TO_CACHE);
+                console.log('[Service Worker] Precachando archivos base uno a uno');
+                return Promise.allSettled(
+                    ASSETS_TO_CACHE.map((url) => {
+                        return cache.add(url).catch((err) => {
+                            console.warn(`[Service Worker] No se pudo precachear: ${url}`, err);
+                        });
+                    })
+                );
             })
             .then(() => self.skipWaiting())
     );
 });
 
-// Evento de Activación: Limpia cachés antiguas si se actualiza la versión
+// Evento de Activación: Limpia cachés antiguas
 self.addEventListener('activate', (event) => {
     event.waitUntil(
         caches.keys().then((cacheNames) => {
@@ -44,27 +50,34 @@ self.addEventListener('activate', (event) => {
     );
 });
 
-// Interceptor de Peticiones: Si no hay red, sirve desde la caché
+// Interceptor de Peticiones: Sirve desde caché (ignorando query strings) o red
 self.addEventListener('fetch', (event) => {
-    // Excluir peticiones que no sean GET (como solicitudes a APIs externas de análisis si las hubiera)
-    if (event.request.method !== 'GET') return;
+    // Excluir peticiones que no sean GET o que no sean HTTP/HTTPS (por ejemplo, extensiones)
+    if (event.request.method !== 'GET' || !event.request.url.startsWith('http')) return;
 
     event.respondWith(
-        caches.match(event.request).then((cachedResponse) => {
+        caches.match(event.request, { ignoreSearch: true }).then((cachedResponse) => {
             if (cachedResponse) {
-                // Devolver recurso de la caché, pero intentar actualizarlo de fondo si hay red
+                // Devolver recurso de la caché, e intentar actualizarlo de fondo si hay red
                 fetch(event.request).then((networkResponse) => {
-                    if (networkResponse.status === 200) {
+                    if (networkResponse && (networkResponse.status === 200 || networkResponse.status === 0)) {
                         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse));
                     }
-                }).catch(() => {/* Silenciar error si está offline */});
+                }).catch(() => {/* Silenciar fallos de red en segundo plano */});
                 
                 return cachedResponse;
             }
 
-            // Si no está en caché, ir a la red
-            return fetch(event.request).catch(() => {
-                // Si falla la red y es una petición de imagen/API, podrías retornar contingencias aquí
+            // Si no está en caché, ir a la red y almacenar dinámicamente si tiene éxito
+            return fetch(event.request).then((networkResponse) => {
+                if (networkResponse && (networkResponse.status === 200 || networkResponse.status === 0)) {
+                    const responseCopy = networkResponse.clone();
+                    caches.open(CACHE_NAME).then((cache) => {
+                        cache.put(event.request, responseCopy);
+                    });
+                }
+                return networkResponse;
+            }).catch(() => {
                 console.log('[Service Worker] Recurso no disponible offline:', event.request.url);
             });
         })

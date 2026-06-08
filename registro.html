@@ -15,6 +15,7 @@
             <a href="index.html" class="logo"><i class="fa-solid fa-honeycomb brand-icon"></i>La <span>Colmena</span></a>
             <div class="nav-user-actions">
                 <button id="theme-toggle-btn" class="theme-btn"><i class="fa fa-moon"></i></button>
+                <div id="nav-profile-widget"></div>
             </div>
         </div>
     </nav>
@@ -67,11 +68,8 @@
                         <input type="password" id="reg-password" required placeholder="Mínimo 6 caracteres">
                     </div>
                     <div class="input-group-colmena">
-                        <label for="reg-role">Tipo de Rol Comercial</label>
-                        <select id="reg-role" class="select-colmena" style="width:100%; padding:12px; border-radius:8px;" required>
-                            <option value="Usuario regular">Usuario Regular (Comprador)</option>
-                            <option value="Administrador">Administrador (Gestor de Inventario)</option>
-                        </select>
+                        <label for="reg-password-confirm">Confirmar Contraseña</label>
+                        <input type="password" id="reg-password-confirm" required placeholder="Repite tu contraseña">
                     </div>
                     
                     <button type="submit" class="btn-primary-colmena w-100" style="padding: 12px; margin-top: 10px; justify-content: center;">
@@ -93,6 +91,29 @@
                         <a href="#" onclick="switchAuthTab('login')" style="color: var(--text-secondary); font-size: 0.85rem; text-decoration: none;"><i class="fa-solid fa-arrow-left"></i> Volver al Login</a>
                     </div>
                 </form>
+
+                <form id="reset-form" class="auth-form-element hidden">
+                    <h3>Establecer nueva contraseña</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 0.9rem;">Ingresa tu nueva contraseña para la cuenta: <strong id="reset-email-display" style="color: var(--text-primary);"></strong></p>
+                    
+                    <input type="hidden" id="reset-email-hidden">
+                    
+                    <div class="input-group-colmena">
+                        <label for="reset-password">Nueva Contraseña</label>
+                        <input type="password" id="reset-password" required placeholder="Mínimo 6 caracteres">
+                    </div>
+                    <div class="input-group-colmena">
+                        <label for="reset-password-confirm">Confirmar Nueva Contraseña</label>
+                        <input type="password" id="reset-password-confirm" required placeholder="Repite tu contraseña">
+                    </div>
+                    
+                    <button type="submit" class="btn-primary-colmena w-100" style="padding: 12px; margin-top: 10px; justify-content: center;">
+                        <i class="fa-solid fa-key"></i> Guardar Nueva Contraseña
+                    </button>
+                    <div style="text-align: center; margin-top: 15px;">
+                        <a href="#" onclick="switchAuthTab('login')" style="color: var(--text-secondary); font-size: 0.85rem; text-decoration: none;"><i class="fa-solid fa-arrow-left"></i> Volver al Login</a>
+                    </div>
+                </form>
                 
                 <div id="auth-global-feedback" class="newsletter-feedback hidden" style="margin-top:20px; padding:12px; border-radius:8px; text-align:center;"></div>
             </div>
@@ -107,9 +128,9 @@
         <p id="profile-email-display" style="font-size: 0.9rem; color: var(--text-secondary);"></p>
     </div>
 
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 30px; align-items: start;">
+    <div id="profile-grid-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 30px; align-items: start;">
         
-        <div style="background: var(--bg-surface); padding: 5px; border-radius: 8px;">
+        <div id="profile-edit-col" style="background: var(--bg-surface); padding: 5px; border-radius: 8px;">
             <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
                 <i class="fa-solid fa-user-gear" style="color: var(--ucab-green-light);"></i> Configuración de Cuenta
             </h3>
@@ -122,7 +143,7 @@
                     <label for="edit-avatar">URL de Imagen de Perfil (Avatar)</label>
                     <input type="url" id="edit-avatar" required placeholder="https://ejemplo.com/foto.jpg">
                 </div>
-                <div class="input-group-colmena">
+                <div class="input-group-colmena" id="edit-address-group">
                     <label for="edit-address">Dirección de Envío / Entrega Física</label>
                     <textarea id="edit-address" rows="3" required placeholder="Indica calle, sector u oficina de la universidad..."></textarea>
                 </div>
@@ -138,7 +159,7 @@
             </form>
         </div>
 
-        <div style="background: var(--bg-surface); border-left: 1px solid var(--border-subtle); padding-left: 15px;">
+        <div id="profile-history-col" style="background: var(--bg-surface); border-left: 1px solid var(--border-subtle); padding-left: 15px;">
             <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
                 <i class="fa-solid fa-clock-rotate-left" style="color: var(--ucab-green-light);"></i> Mis Pedidos en La Colmena
             </h3>
@@ -153,6 +174,33 @@
 
         </div>
     </main>
+
+    <footer class="main-footer">
+        <div class="footer-container">
+            <div class="footer-top-row">
+                <div class="footer-brand">
+                    <span class="logo-footer">La <span>Colmena</span></span>
+                    <p>Tu punto de encuentro comercial moderno, seguro y descentralizado.</p>
+                </div>
+                <div class="footer-links-group">
+                    <a href="#">Privacidad</a>
+                    <a href="#">Términos</a>
+                    <a href="#">Ayuda</a>
+                </div>
+                <div class="footer-socials">
+                    <a href="#" aria-label="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
+                    <a href="#" aria-label="Twitter"><i class="fa-brands fa-x-twitter"></i></a>
+                    <a href="#" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
+                </div>
+            </div>
+            <div class="footer-bottom-row">
+                <p>&copy; 2026 La Colmena. Todos los derechos reservados.</p>
+                <div class="network-badge-colmena" id="network-status">
+                    <i id="network-icon" class="fa fa-circle"></i> <span id="network-text">Verificando conexión...</span>
+                </div>
+            </div>
+        </div>
+    </footer>
 
     <script src="app.js"></script>
 </body>
