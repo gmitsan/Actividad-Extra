@@ -1,5 +1,5 @@
-const AppState = {
-    // Estado global de la app. Busca primero en los storages para mantener la sesión y el carrito del usuario.
+
+const AppState = {//guardamos en memoria todo lo que la app necesita para funcionar al instante.
     theme: localStorage.getItem('theme') || 'light',
     user: JSON.parse(sessionStorage.getItem('activeUser')) || null,
     products: JSON.parse(localStorage.getItem('products')) || [],
@@ -9,64 +9,64 @@ const AppState = {
     offlineQueue: JSON.parse(localStorage.getItem('colmena_offline_queue')) || []
 };
 
-// El motor de arranque de la página una vez que el HTML está listo
-document.addEventListener('DOMContentLoaded', async () => {
+
+document.addEventListener('DOMContentLoaded', async () => {//se dispara apenas el navegador termina de construir el HTML de la página.
     applyThemeEngine(AppState.theme);
     syncNetworkBadge();
     
-    // Registro del Service Worker para soporte PWA / Offline
+    // Si el navegador soporta Service Workers, registramos 'sw.js' para que la app
+    // funcione perfectamente sin internet.
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('sw.js')
             .then(reg => console.log('Service Worker registrado con éxito:', reg.scope))
             .catch(err => console.error('Error al registrar Service Worker:', err));
     }
     
-    // Intenta traer los productos nuevos; si falla, se activa el plan de contingencia offline
     try {
         await guaranteeCacheData();
     } catch (e) {
         console.warn("No se pudo sincronizar la API externa, usando datos locales offline.", e);
     }
     
-    // Encendemos los módulos visuales e interactivos
     initRouting();
     attachGlobalEvents();
     updateGlobalCartCounter();
     renderNavProfileWidget();
 });
 
-function initRouting() {
+//Sistema de rutas
+function initRouting() { // Controla el flujo de navegación según la página web donde esté parado el usuario.
+
     const path = window.location.pathname;
     
-    // Si un administrador se mete a la tienda por error, lo mandamos directo a su panel
+    // Bloqueo: Si un Administrador intenta ir a la tienda o catálogo,
     const isStorePage = path.endsWith('index.html') || path.endsWith('catalogo.html') || path.endsWith('detalle.html') || path === '/' || path.endsWith('/');
     if (isStorePage && AppState.user && AppState.user.role === 'Administrador') {
         window.location.href = 'admin.html';
         return;
     }
     
-    // Guardia de seguridad: Si intentas entrar al panel admin sin serlo, te saca
+    // Bloqueo: Si un usuario regular intenta ir en el Panel Admin,
     if (path.endsWith('admin.html')) {
         if (!AppState.user || AppState.user.role !== 'Administrador') {
-            alert("Acceso denegado: Se requieren privilegios administrativos.");
             window.location.href = 'index.html';
             return;
         }
     }
 
-    // Comportamiento dinámico: El logo llevará al panel si eres admin
-    if (AppState.user && AppState.user.role === 'Administrador') {
+    if (AppState.user && AppState.user.role === 'Administrador') {  // Si es admin el navbar te lleva a admin.html
+
         document.querySelectorAll('.logo, a.logo').forEach(el => {
             el.href = 'admin.html';
         });
     }
 
-    // Enrutador básico para saber qué inicializar según la URL actual
     if (path.endsWith('index.html') || path === '/' || path.endsWith('/')) {
         renderApiFeaturedProducts();
         initNewsletterModule();
         
-        // Auto-abre el checkout si viene redirigido desde el login tras intentar comprar
+        // Si el usuario venía de intentar pagar y tuvo que iniciar sesión,
+        // disparamos automáticamente el modal de pago al volver al index.
         if (window.location.search.includes('triggerCheckout=true')) {
             setTimeout(() => {
                 window.history.replaceState({}, document.title, window.location.pathname);
@@ -84,17 +84,15 @@ function initRouting() {
     }
 }
 
-async function guaranteeCacheData() {
-    // Si ya tenemos productos guardados localmente, nos ahorramos la petición a la API
+async function guaranteeCacheData() {//Carga el inventario
     if (AppState.products.length > 0) return;
     try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 segundos de tolerancia o se cae
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // Límite de espera de 5 segundos
 
         const res = await fetch('https://fakestoreapi.com/products', { signal: controller.signal });
         clearTimeout(timeoutId);
         
-        // Formateamos la respuesta de la API adaptándola a las necesidades de nuestro inventario
         const apiData = await res.json();
         AppState.products = apiData.map(item => ({
             id: Number(item.id),
@@ -103,13 +101,12 @@ async function guaranteeCacheData() {
             category: item.category,
             description: item.description,
             image: item.image,
-            stock: Math.floor(Math.random() * 12) + 4, // Stock aleatorio inicial para simulación
+            stock: Math.floor(Math.random() * 12) + 4, // Stock dinámico inicial
             rating: item.rating || { rate: 4.2, count: 8 }
         }));
         localStorage.setItem('products', JSON.stringify(AppState.products));
     } catch (error) {
         console.error("Cargando desde almacenamiento offline local por falla de red.", error);
-        // Producto de emergencia para que la tienda no se vea rota si no hay internet ni caché previa
         if (AppState.products.length === 0) {
             AppState.products = [
                 { id: 1, title: "Producto de Contingencia Local", price: 25.0, category: "electronica", description: "Cargado en modo offline seguro.", image: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400", stock: 5, rating: { rate: 5.0, count: 1 } }
@@ -119,8 +116,7 @@ async function guaranteeCacheData() {
     }
 }
 
-function updateGlobalCartCounter() {
-    // Actualiza el número flotante del carrito en el menú de navegación
+function updateGlobalCartCounter() {//Contador dek carrito del navbar
     const counters = document.querySelectorAll('#cart-global-count');
     const totalItems = AppState.cart.reduce((acc, item) => acc + item.cantidad, 0);
     counters.forEach(counter => {
@@ -128,20 +124,18 @@ function updateGlobalCartCounter() {
     });
 }
 
-function applyThemeEngine(theme) {
-    // Inyecta el atributo del tema al HTML y cambia el icono de sol/luna
+function applyThemeEngine(theme) {//Cambio de tema
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
     const icon = document.querySelector('#theme-toggle-btn i');
     if (icon) icon.className = theme === 'light' ? 'fa-regular fa-moon' : 'fa-solid fa-sun';
 }
 
-function syncNetworkBadge() {
+function syncNetworkBadge() {//Verifica si hay o no conexion
     const badge = document.getElementById('network-status');
     const text = document.getElementById('network-text');
     const icon = document.getElementById('network-icon');
     
-    // Monitorea el estado de la conexión e intenta procesar deudas si vuelve el internet
     const updateStatus = () => {
         const isOnline = navigator.onLine;
         if (badge) badge.className = `network-badge-colmena ${isOnline ? 'online' : 'offline'}`;
@@ -156,14 +150,15 @@ function syncNetworkBadge() {
     updateStatus();
 }
 
-function attachGlobalEvents() {
-    // Listener para cambiar el tema claro/oscuro
+
+function attachGlobalEvents() {// Asocia los clicks del usuario a las acciones generales de la app
+    // Al hacer clic en el icono del sol/luna, cambiamos de modo visual
     document.getElementById('theme-toggle-btn')?.addEventListener('click', () => {
         AppState.theme = AppState.theme === 'light' ? 'dark' : 'light';
         applyThemeEngine(AppState.theme);
     });
 
-    // Limpia eventos inline viejos y asigna la apertura limpia de la barra lateral del carrito
+    // Vinculamos cualquier botón que tenga el atributo para abrir el carrito flotante
     document.querySelectorAll('[onclick="toggleCartSidebar(true)"]').forEach(btn => {
         btn.removeAttribute('onclick'); 
         btn.addEventListener('click', (e) => {
@@ -172,29 +167,29 @@ function attachGlobalEvents() {
         });
     });
 
-    // Cierre del carrito clickeando la equis
+    // Cerrar el carrito flotante desde la "X" del sidebar
     const closeBtn = document.querySelector('.cart-close-btn');
     if (closeBtn) {
         closeBtn.removeAttribute('onclick');
         closeBtn.addEventListener('click', () => toggleCartSidebar(false));
     }
 
-    // Cierre del carrito haciendo click fuera de la barra (en el fondo oscuro)
+    // Cerrar el carrito haciendo click en el fondo semi-transparente difuminado
     const overlay = document.getElementById('cart-overlay');
     if (overlay) {
         overlay.removeAttribute('onclick');
         overlay.addEventListener('click', () => toggleCartSidebar(false));
     }
 
+    // Dibujamos el estado del usuario en la esquina superior del navbar
     renderNavProfileWidget();
 }
 
-function renderNavProfileWidget() {
+function renderNavProfileWidget() {// gestiona el navbar
     const widget = document.getElementById('nav-profile-widget');
     if (!widget) return;
     
     if (AppState.user) {
-        // Muestra el avatar y desplegable si hay una sesión iniciada
         widget.innerHTML = `
             <div class="nav-user-logged-wrapper" style="display:flex; align-items:center; gap:10px; cursor:pointer; position:relative;" onclick="const menu = document.getElementById('nav-profile-dropdown'); if(menu) menu.classList.toggle('hidden')">
                 <img src="${AppState.user.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80'}" class="nav-avatar-img" style="width:34px; height:34px; border-radius:50%; object-fit:cover;" alt="Avatar">
@@ -211,7 +206,6 @@ function renderNavProfileWidget() {
             </div>
         `;
     } else {
-        // Muestra el botón de "Ingresar" si es un usuario anónimo
         if (window.location.pathname.endsWith('registro.html')) {
             widget.innerHTML = '';
         } else {
@@ -223,7 +217,7 @@ function renderNavProfileWidget() {
         }
     }
 
-    // Cambia dinámicamente los botones de llamadas a la acción en las portadas/heros
+    // Si estamos en la Landing Page, actualizamos también el botón de acción principal del Hero
     const heroAuthBtn = document.getElementById('hero-auth-btn');
     if (heroAuthBtn) {
         if (AppState.user) {
@@ -236,30 +230,29 @@ function renderNavProfileWidget() {
     }
 }
 
+
 function toggleCartSidebar(open) {
-    // Desplaza la barra lateral del carrito hacia adentro o afuera de la pantalla
     const sidebar = document.getElementById('cart-sidebar');
     const overlay = document.getElementById('cart-overlay');
     if (sidebar) sidebar.classList.toggle('open', open);
     if (overlay) overlay.classList.toggle('open', open);
-    if (open) renderCartSidebarItems();
+    if (open) renderCartSidebarItems(); // Si se abre, repintamos la lista de compras al día
 }
 
-function renderCartSidebarItems() {
+
+function renderCartSidebarItems() {//Maneja el carrito, bgenera los productoss que se añaden
     const container = document.getElementById('cart-items-container');
     const totalDisplay = document.getElementById('cart-total-display');
     if (!container || !totalDisplay) return;
-    
     updateGlobalCartCounter();
     
-    // Estado vacío amigable por si no hay nada seleccionado
+    // Si está vacío, le mostramos un estado amistoso indicándolo
     if (AppState.cart.length === 0) {
         container.innerHTML = `<div class="cart-empty-state" style="padding:40px 20px; text-align:center; color:var(--text-muted);"><i class="fa-solid fa-box-open" style="font-size:2rem; margin-bottom:10px;"></i><p>Tu colmena está vacía.</p></div>`;
         totalDisplay.textContent = "$0.00";
         return;
     }
     
-    // Maqueta la lista de compras desglosada con botones de control para sumar/restar cantidades
     let totalPrecio = 0;
     container.innerHTML = AppState.cart.map(item => {
         const subtotal = item.price * item.cantidad;
@@ -286,23 +279,25 @@ function renderCartSidebarItems() {
     totalDisplay.textContent = `$${totalPrecio.toFixed(2)}`;
 }
 
-function abrirPasarelaPagoModal() {
-    // Filtros previos antes de dejar pasar al usuario al formulario de pago simulado
+function abrirPasarelaPagoModal() {//pasarela de pago
     if (AppState.cart.length === 0) {
         alert("El carrito está vacío.");
         return;
     }
+    // Si no ha iniciado sesión, activamos un flag para recordarlo y lo mandamos a registro
     if (!AppState.user) {
         alert("Inicia sesión para poder consolidar tu pedido.");
-        localStorage.setItem('checkout_lock_redirect', 'true'); // Bandera para volver aquí tras loguearse
+        localStorage.setItem('checkout_lock_redirect', 'true');
         window.location.href = 'registro.html';
         return;
     }
+    // Seguridad adicional: El rol administrador no compra en la colmena
     if (AppState.user.role === 'Administrador') {
         alert("Los administradores no pueden realizar simulaciones de compra de productos.");
         return;
     }
 
+    // Cerramos el menú lateral del carrito para centrar la atención en el modal
     toggleCartSidebar(false);
     const totalCompra = AppState.cart.reduce((acc, i) => acc + (i.price * i.cantidad), 0);
     
@@ -313,16 +308,47 @@ function abrirPasarelaPagoModal() {
         document.body.appendChild(modal);
     }
     
-    // Construye dinámicamente la ventana modal de la tarjeta de crédito
+    // Inyectamos el diseño premium del formulario de cobro seguro
     modal.innerHTML = `
         <div class="checkout-modal-overlay">
             <div class="checkout-modal-card" style="background:var(--bg-surface); max-width:480px; width:100%; padding:25px; border-radius:16px; border:1px solid var(--border-subtle); position:relative;">
-                ... formulario de pasarela ...
+                <h3 style="margin-bottom:15px; font-size:1.3rem;"><i class="fa-solid fa-credit-card"></i> Pasarela de Pago Seguro</h3>
+                <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:15px;">Estás procesando una orden para la dirección: <br><strong>${AppState.user.address || 'Campus UCAB Montalbán'}</strong></p>
+                
+                <div style="background:var(--bg-main); padding:12px; border-radius:8px; margin-bottom:20px; font-weight:700; display:flex; justify-content:between;">
+                    <span>Total Neto a Pagar:</span>
+                    <span style="color:var(--ucab-green-light);">$${totalCompra.toFixed(2)}</span>
+                </div>
+
+                <form id="real-checkout-form-submit">
+                    <div class="input-group-colmena" style="margin-bottom:12px;">
+                        <label>Nombre del Tarjetahabiente</label>
+                        <input type="text" required value="${AppState.user.name}" style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--border-subtle); background:var(--bg-surface); color:var(--text-primary);">
+                    </div>
+                    <div class="input-group-colmena" style="margin-bottom:12px;">
+                        <label>Número de Tarjeta (Simulado)</label>
+                        <input type="text" maxlength="16" placeholder="4111 2222 3333 4444" required style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--border-subtle); background:var(--bg-surface); color:var(--text-primary);">
+                    </div>
+                    <div style="display:flex; gap:12px; margin-bottom:20px;">
+                        <div class="input-group-colmena" style="flex:1;">
+                            <label>Vencimiento</label>
+                            <input type="text" placeholder="12/29" required style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--border-subtle); background:var(--bg-surface); color:var(--text-primary);">
+                        </div>
+                        <div class="input-group-colmena" style="flex:1;">
+                            <label>CVC / CVV</label>
+                            <input type="password" maxlength="3" placeholder="***" required style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--border-subtle); background:var(--bg-surface); color:var(--text-primary);">
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:10px;">
+                        <button type="button" onclick="document.getElementById('checkout-modal-root').innerHTML=''" class="btn-logout-colmena" style="flex:1; background:transparent; border:1px solid var(--text-muted); color:var(--text-secondary); padding:12px; border-radius:8px; cursor:pointer; font-weight:600;">Cancelar</button>
+                        <button type="submit" class="btn-primary-colmena" style="flex:1; justify-content:center; padding:12px;">Confirmar Pago</button>
+                    </div>
+                </form>
             </div>
         </div>
     `;
     
-    // Intercepta el envío del pago para cerrar la modal y registrar la transacción
+    // Al enviar el formulario de cobro seguro, disparamos el flujo para registrar la venta
     document.getElementById('real-checkout-form-submit').addEventListener('submit', (e) => {
         e.preventDefault();
         document.getElementById('checkout-modal-root').innerHTML = '';
@@ -330,20 +356,18 @@ function abrirPasarelaPagoModal() {
     });
 }
 
-function agregarAlCarritoReal(productId) {
-    // Bloqueo para evitar que administradores alteren el flujo de ventas simulado
+
+function agregarAlCarritoReal(productId) {//Añade el producto al carrito
     if (AppState.user && AppState.user.role === 'Administrador') {
         alert("Los administradores no pueden agregar productos al carrito ni realizar compras.");
         return;
     }
-    
     const targetProduct = AppState.products.find(p => Number(p.id) === Number(productId));
     if (!targetProduct || targetProduct.stock <= 0) {
         alert("Lo sentimos, producto sin stock disponible.");
         return;
     }
     
-    // Suma +1 si el producto ya existía, o inserta un nodo nuevo al array si es el primero
     const existingItem = AppState.cart.find(item => Number(item.id) === Number(productId));
     if (existingItem) {
         existingItem.cantidad += 1;
@@ -356,19 +380,18 @@ function agregarAlCarritoReal(productId) {
             cantidad: 1
         });
     }
+    
     localStorage.setItem('colmena_cart', JSON.stringify(AppState.cart));
     updateGlobalCartCounter();
     renderCartSidebarItems();
     alert("¡Producto añadido al carrito!");
 }
 
-function alterarCantidadCarrito(id, delta) {
+function alterarCantidadCarrito(id, delta) {//Edita cantidades en carrito
     const idx = AppState.cart.findIndex(i => Number(i.id) === Number(id));
     if (idx === -1) return;
     
     AppState.cart[idx].cantidad += delta;
-    
-    // Si la cantidad llega a cero, borramos el renglón. Si supera el inventario real, frena allí.
     if (AppState.cart[idx].cantidad <= 0) {
         AppState.cart.splice(idx, 1);
     } else {
@@ -382,18 +405,16 @@ function alterarCantidadCarrito(id, delta) {
     renderCartSidebarItems();
 }
 
-function eliminarDelCarritoTotal(id) {
-    // Remueve por completo un producto del carrito sin importar cuántas unidades tenía
+function eliminarDelCarritoTotal(id) {//Elimina totalmente de la cesta
     AppState.cart = AppState.cart.filter(i => Number(i.id) !== Number(id));
     localStorage.setItem('colmena_cart', JSON.stringify(AppState.cart));
     renderCartSidebarItems();
 }
 
-function renderApiFeaturedProducts() {
+function renderApiFeaturedProducts() {// Los productos destacados del index
     const grid = document.getElementById('featured-products-grid');
     if (!grid) return;
     
-    // Filtra las mejores 4 ofertas basándose en las estrellitas de calificación
     const destacados = [...AppState.products]
         .sort((a, b) => (b.rating?.rate || 0) - (a.rating?.rate || 0))
         .slice(0, 4);
@@ -403,19 +424,32 @@ function renderApiFeaturedProducts() {
         return;
     }
     
-    // Renderiza las tarjetas de producto destacadas en la Home
     grid.innerHTML = destacados.map(p => `
         <article class="product-card">
-            ... tarjeta de producto ...
+            <div class="product-image-wrapper">
+                <img src="${p.image}" alt="${p.title}" loading="lazy">
+            </div>
+            <div class="product-info-payload">
+                <span class="product-tag-category">${p.category}</span>
+                <h3>${p.title}</h3>
+                <div class="rating-row-stars">
+                    <span class="star-rating-numeric">★ ${p.rating.rate.toFixed(1)}</span>
+                    <span class="stock-badge ${p.stock > 0 ? 'in-stock' : 'no-stock'}">${p.stock > 0 ? `Stock: ${p.stock}` : 'Agotado'}</span>
+                </div>
+                <div class="product-footer-action">
+                    <div class="product-price-value">$${p.price.toFixed(2)}</div>
+                    <a href="detalle.html?id=${p.id}" class="view-more-link-btn"><i class="fa-solid fa-circle-info"></i> Detalles</a>
+                </div>
+            </div>
         </article>
     `).join('');
 }
 
-function initNewsletterModule() {
-    // Manejo básico de suscripción al boletín de noticias en el pie de página
+function initNewsletterModule() {//Boton de suscripcion de newsletter
     const form = document.getElementById('newsletter-form');
     const msg = document.getElementById('newsletter-message');
     if (!form || !msg) return;
+    
     form.addEventListener('submit', (e) => {
         e.preventDefault();
         msg.textContent = "¡Te has suscrito con éxito!";
@@ -425,38 +459,40 @@ function initNewsletterModule() {
     });
 }
 
-function initCatalogoPage() {
+function initCatalogoPage() {// Gestion de catalogo
     const grid = document.getElementById('main-catalog-grid');
     const searchInput = document.getElementById('catalog-search');
     const categorySelect = document.getElementById('filter-category');
     const priceSelect = document.getElementById('filter-price');
     if (!grid) return;
     
-    // Genera automáticamente las opciones de categorías del selector leyendo los productos reales
     const categories = [...new Set(AppState.products.map(p => p.category))];
     if (categorySelect) {
         categorySelect.innerHTML = '<option value="all">Todas las Categorías</option>' + categories.map(c => `<option value="${c}">${c}</option>`).join('');
     }
     
-    // Motor interno de filtrado acumulativo (búsqueda + selector de categoría + rangos de precio)
     const filtrarYRenderizar = () => {
         let filtrados = [...AppState.products];
         const searchVal = searchInput?.value.toLowerCase().trim() || "";
         const catVal = categorySelect?.value || "all";
         const priceVal = priceSelect?.value || "all";
         
+        // Búsqueda por texto (título o descripción)
         if (searchVal) {
             filtrados = filtrados.filter(p => p.title.toLowerCase().includes(searchVal) || p.description.toLowerCase().includes(searchVal));
         }
+        // Filtrado por categoría
         if (catVal !== "all") {
             filtrados = filtrados.filter(p => p.category === catVal);
         }
+        // Filtrado por rango de precios
         if (priceVal !== "all") {
             if (priceVal === "low") filtrados = filtrados.filter(p => p.price <= 50);
             else if (priceVal === "mid") filtrados = filtrados.filter(p => p.price > 50 && p.price <= 150);
             else if (priceVal === "high") filtrados = filtrados.filter(p => p.price > 150);
         }
         
+        // Si no hay coincidencias, pintamos un mensaje amigable
         if (filtrados.length === 0) {
             grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:40px; color:var(--text-secondary);"><i class="fa-solid fa-magnifying-glass" style="font-size:2rem; margin-bottom:10px;"></i><p>No se encontraron productos con los filtros seleccionados.</p></div>`;
             return;
@@ -464,44 +500,114 @@ function initCatalogoPage() {
         
         grid.innerHTML = filtrados.map(p => `
             <article class="product-card">
-               ... maqueta catálogo ...
+                <div class="product-image-wrapper">
+                    <img src="${p.image}" alt="${p.title}">
+                </div>
+                <div class="product-info-payload">
+                    <span class="product-tag-category">${p.category}</span>
+                    <h3>${p.title}</h3>
+                    <div class="rating-row-stars">
+                        <span class="star-rating-numeric">★ ${p.rating.rate.toFixed(1)}</span>
+                        <span class="stock-badge ${p.stock > 0 ? 'in-stock' : 'no-stock'}">${p.stock > 0 ? `Stock: ${p.stock}` : 'Sin Stock'}</span>
+                    </div>
+                    <div class="product-footer-action">
+                        <div class="product-price-value">$${p.price.toFixed(2)}</div>
+                        <a href="detalle.html?id=${p.id}" class="view-more-link-btn"><i class="fa fa-eye"></i> Ver</a>
+                    </div>
+                </div>
             </article>
         `).join('');
     };
     
-    // Reactividad en vivo al escribir o seleccionar opciones
     searchInput?.addEventListener('input', filtrarYRenderizar);
     categorySelect?.addEventListener('change', filtrarYRenderizar);
     priceSelect?.addEventListener('change', filtrarYRenderizar);
     filtrarYRenderizar();
 }
 
-function initDetallePage() {
+function initDetallePage() {//detalle de un producto
+    // Jalamos los parámetros del buscador de la URL para saber qué ID nos pasaron
     const params = new URLSearchParams(window.location.search);
     const productId = parseInt(params.get('id'));
     const container = document.getElementById('detail-page-container');
     if (!container || !productId) return;
     
+    // Buscamos el producto en nuestro estado global usando el ID
     const prod = AppState.products.find(p => Number(p.id) === Number(productId));
     if (!prod) {
         container.innerHTML = `<p style="text-align:center; padding:40px;">Artículo no localizado en el catálogo.</p>`;
         return;
     }
     
-    // Carga los comentarios guardados de este producto específico
+    // Obtenemos las opiniones de este producto o inicializamos un array vacío si es virgen de comentarios
     const prodReviews = AppState.reviews[productId] || [];
+    // Mapeamos las calificaciones a tarjetitas bonitas con estrellas y la inicial del cliente
     const reviewsHtml = prodReviews.map(r => `
-        ... bloques de comentarios ...
+        <div class="review-card" style="background:var(--bg-main); padding:16px; border-radius:12px; border:1px solid var(--border-subtle); margin-bottom:12px; box-shadow:var(--shadow-sm); display:flex; gap:12px; align-items:start; transition: var(--transition);">
+            <div style="width:36px; height:36px; border-radius:50%; background:var(--bg-surface); color:var(--ucab-green-light); font-weight:700; display:flex; align-items:center; justify-content:center; border:1px solid var(--border-subtle); flex-shrink:0;">
+                ${r.userName.charAt(0).toUpperCase()}
+            </div>
+            <div style="flex:1;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; flex-wrap:wrap; gap:4px;">
+                    <strong style="font-size:0.9rem; color:var(--text-primary);">${r.userName}</strong>
+                    <span style="color:var(--ucab-gold); font-size:0.8rem; letter-spacing:1px;">${'★'.repeat(r.stars)}${'☆'.repeat(5 - r.stars)}</span>
+                </div>
+                <p style="font-size:0.88rem; color:var(--text-secondary); line-height:1.4; margin:0;">${r.comment}</p>
+            </div>
+        </div>
     `).join('') || '<p style="color:var(--text-muted); font-size:0.9rem; font-style:italic;">No hay valoraciones en esta colmena todavía.</p>';
     
-    // Construye la vista interna detallada del artículo junto al formulario para opinar
+    // Inyectamos todo el HTML dinámico de la página de detalle
     container.innerHTML = `
-        ... estructura html de la ficha del producto ...
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:40px; align-items:start; padding:20px 0;">
+            <div style="background:var(--bg-surface); padding:24px; border-radius:var(--radius-lg); border:1px solid var(--border-subtle); text-align:center; box-shadow:var(--shadow-md); display:flex; justify-content:center; align-items:center; min-height:400px;">
+                <div style="background:#FFFFFF; padding:20px; border-radius:var(--radius-md); width:100%; height:100%; display:flex; align-items:center; justify-content:center; min-height:350px;">
+                    <img src="${prod.image}" style="max-height:310px; max-width:100%; object-fit:contain;" alt="${prod.title}">
+                </div>
+            </div>
+            <div>
+                <span class="product-tag-category" style="font-size:0.8rem;">${prod.category.toUpperCase()}</span>
+                <h2 style="font-size:1.8rem; font-weight:800; line-height:1.2; margin:8px 0 15px 0;">${prod.title}</h2>
+                <div style="font-size:1.75rem; font-weight:800; color:var(--text-primary); margin-bottom:15px;">$${prod.price.toFixed(2)}</div>
+                <p style="color:var(--text-secondary); line-height:1.6; margin-bottom:25px;">${prod.description}</p>
+                <div style="margin-bottom:25px;">
+                    <span class="stock-badge ${prod.stock > 0 ? 'in-stock' : 'no-stock'}" style="padding:6px 12px; font-size:0.85rem;">${prod.stock > 0 ? `Unidades Disponibles: ${prod.stock}` : 'Temporalmente Agotado'}</span>
+                </div>
+                <!-- Si no hay stock o es administrador desactivamos el botón de compra -->
+                <button onclick="agregarAlCarritoReal(${prod.id})" class="btn-primary-colmena" style="padding:14px 28px; width:100%; max-width:280px; justify-content:center; font-size:1rem;" ${(prod.stock <= 0 || (AppState.user && AppState.user.role === 'Administrador')) ? 'disabled' : ''}>
+                    <i class="fa fa-shopping-basket"></i> ${AppState.user && AppState.user.role === 'Administrador' ? 'Vista Administrador (Sin compras)' : 'Agregar al Carrito'}
+                </button>
+                
+                <div style="margin-top:40px; border-top:1px solid var(--border-subtle); padding-top:25px;">
+                    <h3 style="font-size:1.2rem; margin-bottom:15px; font-weight:700;"><i class="fa-regular fa-comments"></i> Valoraciones de la Comunidad</h3>
+                    <div style="margin-bottom:20px;">${reviewsHtml}</div>
+                    <form id="review-form" style="background:var(--bg-surface); padding:20px; border-radius:16px; border:1px solid var(--border-subtle); box-shadow:var(--shadow-sm); margin-top:20px;">
+                        <h4 style="font-size:1.05rem; margin-bottom:15px; font-weight:700; color:var(--text-primary); display:flex; align-items:center; gap:8px;"><i class="fa-solid fa-pen-nib" style="color:var(--ucab-green-light)"></i> Añadir tu Opinión</h4>
+                        <div class="input-group-colmena" style="margin-bottom:15px;">
+                            <label style="font-size:0.75rem; font-weight:700; letter-spacing:0.5px; text-transform:uppercase; margin-bottom:6px;">Calificación</label>
+                            <select id="review-stars" class="select-colmena" style="padding:10px; border-radius:8px; background:var(--bg-main); color:var(--text-primary); border:1px solid var(--border-subtle); outline:none; font-weight:600;">
+                                <option value="5">★★★★★ (5 - Excelente)</option>
+                                <option value="4">★★★★☆ (4 - Bueno)</option>
+                                <option value="3">★★★☆☆ (3 - Regular)</option>
+                                <option value="2">★★☆☆☆ (2 - Malo)</option>
+                                <option value="1">★☆☆☆☆ (1 - Muy Malo)</option>
+                            </select>
+                        </div>
+                        <div class="input-group-colmena" style="margin-bottom:20px;">
+                            <label style="font-size:0.75rem; font-weight:700; letter-spacing:0.5px; text-transform:uppercase; margin-bottom:6px;">Comentario</label>
+                            <textarea id="review-comment" rows="3" required placeholder="Comparte tu experiencia con este producto..." style="padding:12px; border-radius:8px; background:var(--bg-main); color:var(--text-primary); border:1px solid var(--border-subtle); outline:none; resize:none; font-family:var(--font-family); font-size:0.9rem;"></textarea>
+                        </div>
+                        <button type="submit" class="btn-primary-colmena w-100" style="padding:12px; justify-content:center; font-size:0.9rem; font-weight:700;">Publicar Comentario</button>
+                    </form>
+                </div>
+            </div>
+        </div>
     `;
     
-    // Guarda opiniones nuevas vinculando el nombre del usuario activo
+    // Configuramos el listener del formulario para agregar la review
     document.getElementById('review-form')?.addEventListener('submit', (e) => {
         e.preventDefault();
+        // Bloqueo: Debes estar logueado para opinar, de lo contrario alertamos
         if (!AppState.user) {
             alert("Debes iniciar sesión para publicar reseñas.");
             return;
@@ -509,17 +615,22 @@ function initDetallePage() {
         const stars = parseInt(document.getElementById('review-stars').value);
         const comment = document.getElementById('review-comment').value.trim();
         if (!AppState.reviews[productId]) AppState.reviews[productId] = [];
+        // Añadimos el nuevo comentario a la memoria
         AppState.reviews[productId].push({ userName: AppState.user.name, stars, comment });
+        // Sincronizamos con el localStorage para persistencia
         localStorage.setItem('colmena_reviews', JSON.stringify(AppState.reviews));
         alert("¡Reseña añadida con éxito!");
+        // Re-inicializamos para pintar la nueva review al instante
         initDetallePage();
     });
 }
 
-function procesarOrdenCompraCarrito() {
+function procesarOrdenCompraCarrito() {//Cuando termina la paserala de pago, se guarda la orden de comrpa
     if (AppState.cart.length === 0) return;
     
+    // Sumamos el total del carrito recorriendo los items agregados
     const totalCompra = AppState.cart.reduce((acc, i) => acc + (i.price * i.cantidad), 0);
+    // Diseñamos el payload de la nueva orden
     const nuevaVenta = {
         id: AppState.ventas.length + 1001,
         userName: AppState.user.name,
@@ -531,44 +642,50 @@ function procesarOrdenCompraCarrito() {
         status: 'Pendiente'
     };
     
-    // Descuenta las unidades adquiridas directamente del inventario maestro
+    // Descontamos el stock de cada producto comprado para evitar inconsistencias
     AppState.cart.forEach(item => {
         const prod = AppState.products.find(p => Number(p.id) === Number(item.id));
         if (prod) prod.stock = Math.max(0, prod.stock - item.cantidad);
     });
+    // Guardamos la base de productos actualizada en el localStorage
     localStorage.setItem('products', JSON.stringify(AppState.products));
     
-    // Si no hay red, la guarda en una lista de espera diferida para enviarla después
+    // Validamos el estado de conexión
     if (navigator.onLine) {
+        // En línea: guardamos de una en la base de ventas global
         AppState.ventas.push(nuevaVenta);
         localStorage.setItem('colmena_ventas', JSON.stringify(AppState.ventas));
         alert(`¡Orden #${nuevaVenta.id} procesada con éxito! Revisa tu panel.`);
     } else {
+        // Sin línea: guardamos temporalmente en la cola offline
         AppState.offlineQueue.push({ type: 'COMPRA', data: nuevaVenta });
         localStorage.setItem('colmena_offline_queue', JSON.stringify(AppState.offlineQueue));
         alert("Pedido guardado localmente en cola offline. Se procesará automáticamente al recuperar conexión.");
     }
     
-    // Limpieza final de vaciado del carrito tras cerrar la orden
+    // Vaciamos el carrito del usuario y refrescamos el contador visual
     AppState.cart = [];
     localStorage.setItem('colmena_cart', JSON.stringify(AppState.cart));
     updateGlobalCartCounter();
+    // Lo redirigimos a la landing page
     window.location.href = 'index.html';
 }
 
-function procesarColaOffline() {
-    // Recorre y vacía las compras acumuladas mientras el dispositivo no tenía internet
+function procesarColaOffline() {//Mete las compras retenidas en el AppState.offlineQueue a la lista oficial
+    // Recorremos cada tarea acumulada y la inyectamos en la lista oficial de ventas
     AppState.offlineQueue.forEach(task => {
         if (task.type === 'COMPRA') AppState.ventas.push(task.data);
     });
+    // Sincronizamos las ventas definitivas
     localStorage.setItem('colmena_ventas', JSON.stringify(AppState.ventas));
+    // Vaciamos la cola offline y actualizamos localStorage
     AppState.offlineQueue = [];
     localStorage.setItem('colmena_offline_queue', JSON.stringify(AppState.offlineQueue));
     alert("¡Sincronización automática completada! Pedidos retenidos offline procesados.");
 }
-
-function initAuthModule() {
-    // Si es la primera vez que se abre el proyecto, inyectamos dos cuentas de prueba preestablecidas
+//Tambien muestras las compras
+function initAuthModule() {// Toda la logica de registro, inicio de sesion, edicion de perfil de usuario y restablecer contraseña
+    // Definimos un par de usuarios iniciales por si la base está limpia
     const usuariosPorDefecto = [
         { name: "Admin Principal", email: "admin@ucab.edu.ve", password: "123", role: "Administrador", avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120", address: "Módulo 4 de Ingeniería UCAB" },
         { name: "Estudiante Regular", email: "estudiante@ucab.edu.ve", password: "123", role: "Usuario regular", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120", address: "Residencias de la Castellana" }
@@ -577,15 +694,16 @@ function initAuthModule() {
         localStorage.setItem('colmena_users_db', JSON.stringify(usuariosPorDefecto));
     }
     
-    // Configura la pantalla de perfil si hay sesión activa, u oculta campos según el rol (Admin vs Regular)
+    // Si el usuario ya inició sesión, pintamos la vista del perfil y ocultamos los formularios de acceso
     if (AppState.user) {
         document.getElementById('auth-forms-wrapper')?.classList.add('hidden');
         document.getElementById('profile-panel-wrapper')?.classList.remove('hidden');
         
+        // Ocultamos las pestañas superiores "Iniciar Sesión / Crear Cuenta" ya que no tienen sentido
         const tabsWrapper = document.querySelector('.auth-tabs');
         if (tabsWrapper) tabsWrapper.style.display = 'none';
         
-        // Carga de datos del usuario en los inputs editables
+        // Pintamos los elementos visuales del perfil
         const avatarDisp = document.getElementById('profile-avatar-display');
         const nameDisp = document.getElementById('profile-name-display');
         const emailDisp = document.getElementById('profile-email-display');
@@ -596,6 +714,7 @@ function initAuthModule() {
         if (emailDisp) emailDisp.textContent = AppState.user.email;
         if (roleDisp) roleDisp.textContent = AppState.user.role;
         
+        // Rellenamos los inputs de edición de información con los valores vigentes
         const editName = document.getElementById('edit-name');
         const editAvatar = document.getElementById('edit-avatar');
         const editAddress = document.getElementById('edit-address');
@@ -603,11 +722,14 @@ function initAuthModule() {
         if (editName) editName.value = AppState.user.name;
         if (editAvatar) editAvatar.value = AppState.user.avatar || '';
         if (editAddress) editAddress.value = AppState.user.address || '';
-
+ 
+        // Aplicamos restricciones de interfaz si el usuario logueado es Administrador
         if (AppState.user.role === 'Administrador') {
+            // Ocultamos la columna del historial de compras (no realiza compras)
             const historyCol = document.getElementById('profile-history-col');
             if (historyCol) historyCol.style.display = 'none';
             
+            // Ocultamos la dirección de envío física y quitamos el atributo de validación HTML 'required'
             const addressGroup = document.getElementById('edit-address-group');
             if (addressGroup) {
                 addressGroup.style.display = 'none';
@@ -615,6 +737,7 @@ function initAuthModule() {
                 if (addressInput) addressInput.removeAttribute('required');
             }
             
+            // Ajustamos el contenedor principal para que use una sola columna centrada
             const gridContainer = document.getElementById('profile-grid-container');
             if (gridContainer) {
                 gridContainer.style.gridTemplateColumns = '1fr';
@@ -622,11 +745,12 @@ function initAuthModule() {
                 gridContainer.style.margin = '0 auto';
             }
         } else {
+            // Si es un usuario regular, procedemos a pintar su historial de compras
             renderHistorialComprasUsuario();
         }
     }
     
-    // Gestión del formulario de Registro de cuentas nuevas
+    // Gestión del formulario de Registro de Cuentas Nuevas
     document.getElementById('register-form')?.addEventListener('submit', (e) => {
         e.preventDefault();
         const name = document.getElementById('reg-name').value.trim();
@@ -636,21 +760,26 @@ function initAuthModule() {
         const role = 'Usuario regular';
         const fb = document.getElementById('auth-global-feedback');
         
+        // Validamos que las contraseñas coincidan
         if (password !== confirmPassword) {
             mostrarMensajeFeedback(fb, "Las contraseñas no coinciden.", "error");
             return;
         }
         
+        // Verificamos si el correo ingresado ya está ocupado en nuestra base
         let db = JSON.parse(localStorage.getItem('colmena_users_db'));
         if (db.some(u => u.email === email)) {
             mostrarMensajeFeedback(fb, "Este correo ya se encuentra registrado.", "error");
             return;
         }
         
+        // Guardamos el nuevo usuario con un avatar por defecto
         const nuevoU = { name, email, password, role, avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150', address: '' };
         db.push(nuevoU);
         localStorage.setItem('colmena_users_db', JSON.stringify(db));
+        
         mostrarMensajeFeedback(fb, "¡Registro completado! Ya puedes iniciar sesión.", "success");
+        // Mandamos al usuario a la pestaña de login tras un breve delay
         setTimeout(() => switchAuthTab('login'), 1500);
     });
     
@@ -668,10 +797,11 @@ function initAuthModule() {
             return;
         }
         
+        // Guardamos el usuario activo en sessionStorage para mantener la sesión viva
         sessionStorage.setItem('activeUser', JSON.stringify(encontrado));
         AppState.user = encontrado;
         
-        // Redirección inteligente según rol o intenciones previas de compra
+        // Redirección inteligente: Si es admin, lo mandamos al panel; si no, evaluamos si venía de checkout
         if (encontrado.role === 'Administrador') {
             window.location.href = 'admin.html';
         } else {
@@ -683,8 +813,8 @@ function initAuthModule() {
             }
         }
     });
-
-    // Envío del formulario de guardado del perfil personal editado
+ 
+    // Gestión de la Edición de Perfil
     document.getElementById('profile-edit-form')?.addEventListener('submit', (e) => {
         e.preventDefault();
         let db = JSON.parse(localStorage.getItem('colmena_users_db'));
@@ -693,18 +823,21 @@ function initAuthModule() {
             const oldName = AppState.user.name;
             const newName = document.getElementById('edit-name').value.trim();
             
+            // Actualizamos los campos en la base
             db[userIndex].name = newName;
             db[userIndex].avatar = document.getElementById('edit-avatar').value.trim();
             db[userIndex].address = document.getElementById('edit-address').value.trim();
             
-            // Corrige los registros históricos de compras viejas para no perder el rastro del cliente
+            // Actualizamos el nombre en el historial de ventas
+            // para evitar que se pierdan las compras asociadas debido al cambio de nombre.
             AppState.ventas.forEach(v => {
                 if (v.userEmail === AppState.user.email || v.userName === oldName) {
                     v.userName = newName;
-                    v.userEmail = AppState.user.email;
+                    v.userEmail = AppState.user.email; // Aseguramos vinculación por email
                 }
             });
             localStorage.setItem('colmena_ventas', JSON.stringify(AppState.ventas));
+            
             localStorage.setItem('colmena_users_db', JSON.stringify(db));
             sessionStorage.setItem('activeUser', JSON.stringify(db[userIndex]));
             AppState.user = db[userIndex];
@@ -712,8 +845,8 @@ function initAuthModule() {
             window.location.reload();
         }
     });
-
-    // Formulario de recuperación de contraseña: busca si existe la cuenta
+ 
+    // Gestión del formulario de Solicitud de Recuperación de Contraseña
     document.getElementById('forgot-form')?.addEventListener('submit', (e) => {
         e.preventDefault();
         const email = document.getElementById('forgot-email').value.trim();
@@ -725,6 +858,7 @@ function initAuthModule() {
             return;
         }
         
+        // Pasamos el correo de forma oculta al formulario de reestablecimiento para saber a quién cambiarle la clave
         const resetEmailHidden = document.getElementById('reset-email-hidden');
         const resetEmailDisplay = document.getElementById('reset-email-display');
         if (resetEmailHidden) resetEmailHidden.value = email;
@@ -733,13 +867,14 @@ function initAuthModule() {
         mostrarMensajeFeedback(fb, "Cuenta localizada. Establece tu nueva contraseña.", "success");
         document.getElementById('forgot-email').value = '';
         
+        // Saltamos de pestaña al formulario de reestablecimiento real (reset)
         setTimeout(() => {
             fb.classList.add('hidden');
             switchAuthTab('reset');
         }, 1200);
     });
-
-    // Reescritura física de la credencial tras validar la recuperación
+ 
+    // Gestión del formulario de Restablecimiento Real de Contraseña
     document.getElementById('reset-form')?.addEventListener('submit', (e) => {
         e.preventDefault();
         const email = document.getElementById('reset-email-hidden').value;
@@ -747,6 +882,7 @@ function initAuthModule() {
         const confirmPassword = document.getElementById('reset-password-confirm').value;
         const fb = document.getElementById('auth-global-feedback');
         
+        // Validamos contraseñas idénticas
         if (newPassword !== confirmPassword) {
             mostrarMensajeFeedback(fb, "Las contraseñas no coinciden.", "error");
             return;
@@ -755,15 +891,21 @@ function initAuthModule() {
         let db = JSON.parse(localStorage.getItem('colmena_users_db')) || [];
         const idx = db.findIndex(u => u.email === email);
         if (idx > -1) {
+            // Guardamos la nueva clave del usuario en la base de datos
             db[idx].password = newPassword;
             localStorage.setItem('colmena_users_db', JSON.stringify(db));
             
+            // Si es el usuario logueado actualmente, actualizamos su clave en la sesión
             if (AppState.user && AppState.user.email === email) {
                 AppState.user.password = newPassword;
                 sessionStorage.setItem('activeUser', JSON.stringify(AppState.user));
             }
             
             mostrarMensajeFeedback(fb, "Contraseña reestablecida con éxito. Redirigiendo...", "success");
+            document.getElementById('reset-password').value = '';
+            document.getElementById('reset-password-confirm').value = '';
+            
+            // Lo mandamos al login finalizado el proceso
             setTimeout(() => {
                 fb.classList.add('hidden');
                 switchAuthTab('login');
@@ -774,34 +916,56 @@ function initAuthModule() {
     });
 }
 
-function renderHistorialComprasUsuario() {
-    // Renderiza la lista compacta de pedidos anteriores en el panel del cliente regular
+
+function renderHistorialComprasUsuario() {//busca todas las ventas que coinciden con el gmail
     const container = document.getElementById('user-orders-history-container');
     if (!container) return;
-
+ 
+    // Filtramos las ventas buscando coincidencia con email o nombre del usuario logueado
     const misCompras = AppState.ventas.filter(v => v.userEmail === AppState.user.email || v.userName === AppState.user.name);
-
+ 
+    // Si no hay compras guardadas, inyectamos un mensaje amigable
     if (misCompras.length === 0) {
-        container.innerHTML = `... estado vacío del historial ...`;
+        container.innerHTML = `
+            <div style="text-align:center; padding:30px; color:var(--text-muted);">
+                <i class="fa-solid fa-bag-shopping" style="font-size:2rem; margin-bottom:10px; display:block;"></i>
+                <p style="font-size:0.9rem;">Aún no has realizado compras en La Colmena.</p>
+            </div>
+        `;
         return;
     }
-
+ 
+    // Mapeamos cada compra a su respectiva tarjeta visual
     container.innerHTML = misCompras.map(compra => {
+        // Configuramos iconos y clases CSS según el estado de la compra
         let statusClass = 'pending';
         let statusIcon = '⏳';
         if (compra.status === 'Enviado') { statusClass = 'shipping'; statusIcon = '🚚'; }
         if (compra.status === 'Entregado') { statusClass = 'delivered'; statusIcon = '✅'; }
-
+ 
         return `
             <div class="user-order-card" style="background:var(--bg-main); border:1px solid var(--border-subtle); padding:16px; border-radius:12px; margin-bottom:12px;">
-               ... item de compra ...
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
+                    <span style="font-weight:700; font-size:0.9rem; color:var(--text-primary);">Orden #${compra.id}</span>
+                    <span style="font-size:0.8rem; color:var(--text-secondary);">${compra.date}</span>
+                </div>
+                <div style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:10px; line-height:1.4;">
+                    <div style="max-height:60px; overflow-y:auto; padding-right:4px;">
+                        ${compra.items.map(i => `• ${i.title} <strong>(x${i.cantidad})</strong>`).join('<br>')}
+                    </div>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px dashed var(--border-subtle); padding-top:10px; margin-top:5px;">
+                    <div><span style="font-size:0.8rem; color:var(--text-muted);">Total:</span> <strong style="color:var(--ucab-green-light); font-size:0.95rem;">$${compra.total.toFixed(2)}</strong></div>
+                    <span class="user-order-status-badge ${statusClass}" style="font-size:0.8rem; font-weight:700; padding:4px 10px; border-radius:6px; background:var(--bg-surface); border:1px solid var(--border-subtle);">
+                        ${statusIcon} ${compra.status}
+                    </span>
+                </div>
             </div>
         `;
     }).join('');
 }
 
-function switchAuthTab(target) {
-    // Gestor estético de visibilidad entre pestañas (Login, Registro, Recuperar, Resetear)
+function switchAuthTab(target) { // El switch de la parte visual del login
     const login = document.getElementById('login-form');
     const register = document.getElementById('register-form');
     const forgot = document.getElementById('forgot-form');
@@ -809,6 +973,7 @@ function switchAuthTab(target) {
     const tabLogin = document.getElementById('tab-login');
     const tabReg = document.getElementById('tab-register');
     
+    // Ocultamos todos por defecto y apagamos estados activos en pestañas superiores
     login?.classList.add('hidden');
     register?.classList.add('hidden');
     forgot?.classList.add('hidden');
@@ -816,6 +981,7 @@ function switchAuthTab(target) {
     tabLogin?.classList.remove('active');
     tabReg?.classList.remove('active');
     
+    // Encendemos únicamente el contenedor solicitado
     if (target === 'login') {
         login?.classList.remove('hidden');
         tabLogin?.classList.add('active');
@@ -829,37 +995,36 @@ function switchAuthTab(target) {
     }
 }
 
-function mostrarMensajeFeedback(el, text, type) {
-    // Alertas rápidas de color verde o rojo para la interfaz del usuario
+
+function mostrarMensajeFeedback(el, text, type) {//Error en los formularios de acceso
     if (!el) return;
     el.textContent = text;
     el.className = `newsletter-feedback ${type}`;
     el.classList.remove('hidden');
 }
 
-function ejecutarCierreSesion() {
-    // Limpia la cookie de sesión de usuario y te devuelve a la raíz comercial de la tienda
+function ejecutarCierreSesion() {//Cierre de sesion
     sessionStorage.removeItem('activeUser');
     AppState.user = null;
     window.location.href = 'index.html';
 }
 
-function initAdminPage() {
-    // Renderiza el panel administrativo e inicializa sus controladores
+function initAdminPage() {// Controlador de la pagina admin
     renderMetricasAdmin();
     renderInventarioTablaAdmin();
     renderListaOrdenesAdmin();
     
-    // Vincula la vista previa dinámica de creación de productos en tiempo real
+    // Escuchamos los inputs clave para actualizar la vista previa de la tarjeta en caliente
     const previewInputs = ['prod-title', 'prod-price', 'prod-category', 'prod-image', 'prod-stock'];
     previewInputs.forEach(id => {
         document.getElementById(id)?.addEventListener('input', updateProductPreview);
     });
     updateProductPreview();
     
+    // Configuramos el listener para abortar la edición y regresar el formulario al modo creación
     document.getElementById('btn-crud-cancel')?.addEventListener('click', resetFormCrud);
     
-    // Procesa la creación de un nuevo producto o sobreescribe uno editado
+    // Guardado de productos (Creación o Edición)
     document.getElementById('crud-form')?.addEventListener('submit', (e) => {
         e.preventDefault();
         const id = document.getElementById('prod-id').value;
@@ -870,31 +1035,34 @@ function initAdminPage() {
         let image = document.getElementById('prod-image').value.trim();
         const stock = parseInt(document.getElementById('prod-stock').value);
         
+        // Imagen por defecto si el administrador no suministra una URL
         if (!image) image = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400";
         
         if (id) {
+            // Caso Edición: Buscamos en el array global y reescribimos el objeto
             const idx = AppState.products.findIndex(p => Number(p.id) === Number(id));
             if (idx > -1) {
                 AppState.products[idx] = { ...AppState.products[idx], title, price, category, description, image, stock };
             }
         } else {
+            // Caso Creación: Sacamos el ID más alto y le sumamos 1
             const maxId = AppState.products.reduce((max, p) => p.id > max ? p.id : max, 0);
             const nuevoP = {
                 id: Number(maxId) + 1,
                 title, price, category, description, image, stock,
-                rating: { rate: 5.0, count: 1 }
+                rating: { rate: 5.0, count: 1 } // Empieza con calificación perfecta
             };
             AppState.products.push(nuevoP);
         }
         
+        // Guardamos los cambios, avisamos y recargamos
         localStorage.setItem('products', JSON.stringify(AppState.products));
         alert("Catálogo actualizado con éxito.");
         window.location.reload();
     });
 }
 
-function renderMetricasAdmin() {
-    // Calcula los resúmenes financieros y contadores generales para las KPI superiores
+function renderMetricasAdmin() {//metricas de admin
     const totalVentas = AppState.ventas.length;
     const totalIngresos = AppState.ventas.reduce((acc, v) => acc + v.total, 0);
     const totalProds = AppState.products.length;
@@ -906,11 +1074,12 @@ function renderMetricasAdmin() {
     if (mVentas) mVentas.textContent = totalVentas;
     if (mIngresos) mIngresos.textContent = `$${totalIngresos.toFixed(2)}`;
     if (mProductos) mProductos.textContent = totalProds;
-
-    // Calcula el porcentaje acumulado de usuarios activos contra la base total de registrados
+ 
+    // Metricas de Usuarios: Registrados vs Activos
     const dbUsers = JSON.parse(localStorage.getItem('colmena_users_db')) || [];
     const registeredCount = dbUsers.length;
     
+    // Contamos usuarios activos acumulando nombres de compradores únicos
     const activeUsersSet = new Set();
     if (AppState.user) activeUsersSet.add(AppState.user.name);
     AppState.ventas.forEach(v => activeUsersSet.add(v.userName));
@@ -918,7 +1087,7 @@ function renderMetricasAdmin() {
     let activeCount = activeUsersSet.size;
     if (activeCount === 0 && registeredCount > 0) activeCount = 1;
     if (activeCount > registeredCount) activeCount = registeredCount;
-
+ 
     const mUserReg = document.getElementById('metric-user-registered');
     const mUserAct = document.getElementById('metric-user-active');
     const mUserBar = document.getElementById('metric-user-ratio-bar');
@@ -929,8 +1098,8 @@ function renderMetricasAdmin() {
         const pct = Math.min(100, Math.round((activeCount / registeredCount) * 100));
         mUserBar.style.width = `${pct}%`;
     }
-
-    // Encuentra los 3 productos con mayor número de volumen vendido y dibuja su barra comparativa
+ 
+    // Metricas de Ranking: Top 3 Productos Más Vendidos
     const productSalesMap = {};
     AppState.ventas.forEach(v => {
         if (v.items && Array.isArray(v.items)) {
@@ -945,7 +1114,7 @@ function renderMetricasAdmin() {
             });
         }
     });
-
+ 
     const sortedSales = Object.values(productSalesMap).sort((a, b) => b.qty - a.qty);
     const top3 = sortedSales.slice(0, 3);
     const topContainer = document.getElementById('metric-top-products-container');
@@ -958,27 +1127,45 @@ function renderMetricasAdmin() {
             topContainer.innerHTML = top3.map((p, index) => {
                 const pct = Math.round((p.qty / maxQty) * 100);
                 return `
-                    ... render barra top ventas ...
+                    <div style="font-size: 0.85rem; margin-bottom: 5px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+                           <span style="font-weight: 600; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 75%;" title="${p.title}">#${index + 1} ${p.title}</span>
+                           <strong style="color: var(--ucab-green-light);">${p.qty} uds</strong>
+                        </div>
+                        <div style="background: var(--bg-main); height: 6px; border-radius: 3px; overflow: hidden;">
+                           <div style="background: var(--ucab-green); height: 100%; width: ${pct}%; transition: width 0.5s ease;"></div>
+                        </div>
+                    </div>
                 `;
             }).join('');
         }
     }
 }
 
-function renderInventarioTablaAdmin() {
-    // Maqueta las filas de la tabla de inventario del Panel de Control del Admin
+
+function renderInventarioTablaAdmin() { //Tabla de inventario en admin
     const tbody = document.getElementById('crud-table-body');
     if (!tbody) return;
     
     tbody.innerHTML = AppState.products.map(p => `
         <tr>
-            ... celdas con fotos, precios y botones de acción rápida ...
+            <td><img src="${p.image}" style="width:40px; height:40px; object-fit:contain; background:#FFF; padding:2px; border-radius:4px;"></td>
+            <td style="font-weight:600; max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p.title}</td>
+            <td><span class="product-category-tag">${p.category}</span></td>
+            <td style="font-weight:700;">$${p.price.toFixed(2)}</td>
+            <td><span class="stock-badge ${p.stock > 0 ? 'in-stock' : 'no-stock'}">${p.stock} uds</span></td>
+            <td>
+                <div style="display:flex; gap:8px;">
+                    <button onclick="cargarProductoParaEditar(${p.id})" style="background:var(--ucab-green); color:#fff; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; font-size:0.8rem;"><i class="fa fa-edit"></i></button>
+                    <button onclick="eliminarProductoAdmin(${p.id})" style="background:#EF4444; color:#fff; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; font-size:0.8rem;"><i class="fa fa-trash"></i></button>
+                </div>
+            </td>
         </tr>
     `).join('');
 }
 
-function cargarProductoParaEditar(id) {
-    // Toma un elemento existente del inventario y precarga sus datos en los campos del editor superior
+
+function cargarProductoParaEditar(id) {//Editar producto siendo admin
     const p = AppState.products.find(prod => Number(prod.id) === Number(id));
     if (!p) return;
     
@@ -992,6 +1179,7 @@ function cargarProductoParaEditar(id) {
     const btnSubmit = document.getElementById('btn-crud-submit');
     const cTitle = document.getElementById('crud-title');
     
+    // Seteamos los inputs con la información cargada
     if (pId) pId.value = p.id;
     if (pTitle) pTitle.value = p.title;
     if (pPrice) pPrice.value = p.price;
@@ -1000,26 +1188,29 @@ function cargarProductoParaEditar(id) {
     if (pImage) pImage.value = p.image.startsWith('http') ? p.image : '';
     if (pStock) pStock.value = p.stock;
     
+    // Reconfiguramos las etiquetas y cabeceras del formulario
     if (btnSubmit) btnSubmit.textContent = "Actualizar Cambios del Producto";
     if (cTitle) cTitle.innerHTML = `<i class="fa-solid fa-pen-to-square"></i> Editando: ${p.title}`;
     
+    // Mostramos el botón de cancelar edición para poder echarse atrás
     const btnCancel = document.getElementById('btn-crud-cancel');
     if (btnCancel) btnCancel.classList.remove('hidden');
     
+    // Actualizamos al instante la tarjeta de vista previa a la derecha
     updateProductPreview();
-    window.scrollTo({ top: 0, behavior: 'smooth' }); // Sube la pantalla con suavidad para ver el editor
+    
+    // Subimos la ventana suavemente para centrar la mirada en el formulario
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function eliminarProductoAdmin(id) {
-    // Alerta de confirmación previa antes de borrar permanentemente un artículo de la base local
+function eliminarProductoAdmin(id) {//Elimnar productos siendo admin
     if (!confirm("¿Seguro que deseas eliminar este artículo del catálogo global?")) return;
     AppState.products = AppState.products.filter(p => Number(p.id) !== Number(id));
     localStorage.setItem('products', JSON.stringify(AppState.products));
     window.location.reload();
 }
 
-function renderListaOrdenesAdmin() {
-    // Imprime todos los pedidos de la plataforma para permitir a los administradores gestionar despachos
+function renderListaOrdenesAdmin() {//Muestra los pedidos de todos los clientes
     const container = document.getElementById('admin-orders-container');
     if (!container) return;
     
@@ -1028,15 +1219,27 @@ function renderListaOrdenesAdmin() {
         return;
     }
     
+    // Pintamos la lista de pedidos de los clientes con el dropdown selector de estado
     container.innerHTML = AppState.ventas.map(v => `
         <div style="background:var(--bg-main); padding:18px; border-radius:12px; border:1px solid var(--border-subtle); margin-bottom:15px;">
-           ... fila de pedidos globales ...
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                <div><strong>Orden #${v.id} - Cliente: ${v.userName}</strong> <span style="font-size:0.8rem; color:var(--text-secondary); margin-left:8px;">(${v.date})</span></div>
+                <select onchange="cambiarEstadoEnvio(${v.id}, this.value)" style="padding:6px 12px; border-radius:6px; background:var(--bg-surface); color:var(--text-primary); border:1px solid var(--border-subtle); font-weight:600;">
+                    <option value="Pendiente" ${v.status === 'Pendiente' ? 'selected' : ''}>⏳ Pendiente</option>
+                    <option value="Enviado" ${v.status === 'Enviado' ? 'selected' : ''}>🚚 Enviado</option>
+                    <option value="Entregado" ${v.status === 'Entregado' ? 'selected' : ''}>✅ Entregado</option>
+                </select>
+            </div>
+            <div style="font-size:0.9rem; color:var(--text-secondary); margin-top:10px; line-height:1.5;">
+                <i class="fa-solid fa-location-dot"></i> Despacho: ${v.address}<br>
+                <i class="fa-solid fa-basket-shopping"></i> Artículos: ${v.items.map(i => `${i.title} (x${i.cantidad})`).join(', ')}<br>
+                <strong style="color:var(--text-primary); font-size:0.95rem;">Monto Cobrado Total: $${v.total.toFixed(2)}</strong>
+            </div>
         </div>
     `).join('');
 }
 
-function cambiarEstadoEnvio(ordenId, nuevoEstado) {
-    // Actualiza si un pedido está Pendiente, Enviado o Entregado desde los menús desplegables del Admin
+function cambiarEstadoEnvio(ordenId, nuevoEstado) {//cambio de estado en las ordenes que ve el admin
     const idx = AppState.ventas.findIndex(v => Number(v.id) === Number(ordenId));
     if (idx > -1) {
         AppState.ventas[idx].status = nuevoEstado;
@@ -1045,14 +1248,15 @@ function cambiarEstadoEnvio(ordenId, nuevoEstado) {
     }
 }
 
-function updateProductPreview() {
-    // Genera la tarjeta visual simulada a un costado del formulario del Administrador mientras escribe
+
+function updateProductPreview() {//El preview del producto del crud
     const titleVal = document.getElementById('prod-title')?.value.trim() || "Título del Producto";
     const priceVal = parseFloat(document.getElementById('prod-price')?.value) || 0;
     const catVal = document.getElementById('prod-category')?.value.trim() || "Categoría";
     let imgVal = document.getElementById('prod-image')?.value.trim();
     const stockVal = parseInt(document.getElementById('prod-stock')?.value) || 0;
 
+    // Si no tiene imagen, colocamos una foto de repuesto bonita
     if (!imgVal) {
         imgVal = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400";
     }
@@ -1060,27 +1264,49 @@ function updateProductPreview() {
     const previewWrapper = document.getElementById('crud-preview-card-wrapper');
     if (!previewWrapper) return;
 
+    // Pintamos la tarjeta de previsualización
     previewWrapper.innerHTML = `
-        ... maqueta interna de tarjeta espejo ...
+        <article class="product-card" style="margin: 0; width: 100%; box-shadow: var(--shadow-md);">
+            <div class="product-image-wrapper">
+                <img src="${imgVal}" alt="${titleVal}">
+            </div>
+            <div class="product-info-payload">
+                <span class="product-tag-category">${catVal}</span>
+                <h3>${titleVal}</h3>
+                <div class="rating-row-stars">
+                    <span class="star-rating-numeric">★ 5.0</span>
+                    <span class="stock-badge ${stockVal > 0 ? 'in-stock' : 'no-stock'}">${stockVal > 0 ? `Stock: ${stockVal}` : 'Agotado'}</span>
+                </div>
+                <div class="product-footer-action">
+                    <div class="product-price-value">$${priceVal.toFixed(2)}</div>
+                    <span class="view-more-link-btn" style="cursor: default;"><i class="fa-solid fa-circle-info"></i> Detalles</span>
+                </div>
+            </div>
+        </article>
     `;
 }
 
-function resetFormCrud() {
-    // Limpia los inputs del editor y devuelve el formulario a su estado original de "Crear Producto"
+
+function resetFormCrud() {//resetea el crud del admin
     const form = document.getElementById('crud-form');
     if (form) form.reset();
     
+    // Limpiamos el ID del producto que indica si estábamos editando
     const pId = document.getElementById('prod-id');
     if (pId) pId.value = '';
     
+    // Regresamos el botón de submit a modo creación
     const btnSubmit = document.getElementById('btn-crud-submit');
     if (btnSubmit) btnSubmit.textContent = "Crear Producto";
     
+    // Ocultamos el botón de cancelar ya que volvimos a modo creación
     const btnCancel = document.getElementById('btn-crud-cancel');
     if (btnCancel) btnCancel.classList.add('hidden');
     
+    // Restauramos el título de la tarjeta de gestión
     const cTitle = document.getElementById('crud-title');
     if (cTitle) cTitle.innerHTML = `<i class="fa-solid fa-boxes-packing" style="color: var(--ucab-green-light);"></i> Gestión de Producto`;
     
+    // Forzamos actualización de la vista previa interactiva con valores en blanco
     updateProductPreview();
 }
