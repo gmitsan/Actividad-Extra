@@ -1,9 +1,7 @@
-/**
- * @file sw.js
- * @description Service Worker con tolerancia a fallos de precarga, ignorado de query params y soporte offline avanzado.
- */
-
+// El nombre de la base de datos de caché. 
 const CACHE_NAME = 'lacolmena-ucab-v5';
+
+// La lista de archivos que la web necesita sí o sí para poder abrirse sin internet.
 const ASSETS_TO_CACHE = [
     'index.html',
     'catalogo.html',
@@ -16,7 +14,7 @@ const ASSETS_TO_CACHE = [
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'
 ];
 
-// Evento de Instalación: Guarda los archivos esenciales en la caché tolerando fallos individuales
+// Instala el Service Worker y guarda los archivos base en la caché (si uno falla, no rompe a los demás)
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME)
@@ -30,35 +28,36 @@ self.addEventListener('install', (event) => {
                     })
                 );
             })
-            .then(() => self.skipWaiting())
+            .then(() => self.skipWaiting()) // Se activa de golpe sin esperar a que el usuario reinicie la pestaña
     );
 });
 
-// Evento de Activación: Limpia cachés antiguas
+// Se ejecuta al activarse: limpia las cachés viejas para que no ocupen espacio en el disco del usuario
 self.addEventListener('activate', (event) => {
     event.waitUntil(
         caches.keys().then((cacheNames) => {
             return Promise.all(
                 cacheNames.map((cache) => {
                     if (cache !== CACHE_NAME) {
-                        console.log('[Service Worker] Borrando caché antigua:', cache);
+                        console.log('[Service Worker] Eliminando caché antigua:', cache);
                         return caches.delete(cache);
                     }
                 })
             );
-        }).then(() => self.clients.claim())
+        }).then(() => self.clients.claim()) // Toma las riendas de la página inmediatamente
     );
 });
 
-// Interceptor de Peticiones: Sirve desde caché (ignorando query strings) o red
+// Intercepta todo lo que la página pide a internet para decidir si lo sirve desde la caché o va a buscarlo en vivo
 self.addEventListener('fetch', (event) => {
-    // Excluir peticiones que no sean GET o que no sean HTTP/HTTPS (por ejemplo, extensiones)
+    // Solo nos interesan las peticiones normales de lectura (GET)
     if (event.request.method !== 'GET' || !event.request.url.startsWith('http')) return;
 
     event.respondWith(
+        // 'ignoreSearch: true' hace que ignore los parámetros de la URL (así detalle.html?id=3 funciona offline usando detalle.html)
         caches.match(event.request, { ignoreSearch: true }).then((cachedResponse) => {
             if (cachedResponse) {
-                // Devolver recurso de la caché, e intentar actualizarlo de fondo si hay red
+                // Si ya lo tenemos guardado, lo muestra al instante e intenta actualizarlo de fondo si detecta internet
                 fetch(event.request).then((networkResponse) => {
                     if (networkResponse && (networkResponse.status === 200 || networkResponse.status === 0)) {
                         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse));
@@ -68,7 +67,7 @@ self.addEventListener('fetch', (event) => {
                 return cachedResponse;
             }
 
-            // Si no está en caché, ir a la red y almacenar dinámicamente si tiene éxito
+            // Si no estaba guardado, va a internet y aprovecha de guardarlo dinámicamente en la caché para la próxima
             return fetch(event.request).then((networkResponse) => {
                 if (networkResponse && (networkResponse.status === 200 || networkResponse.status === 0)) {
                     const responseCopy = networkResponse.clone();
@@ -78,6 +77,7 @@ self.addEventListener('fetch', (event) => {
                 }
                 return networkResponse;
             }).catch(() => {
+                // El plan de contingencia por si el usuario no tiene internet ni el recurso guardado
                 console.log('[Service Worker] Recurso no disponible offline:', event.request.url);
             });
         })
